@@ -4,14 +4,14 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useAuth, useResponsive } from '@/hooks';
+import { useResponsive } from '@/hooks';
 import { FormButton, FormField, type FormFieldConfig } from '@/components/ui';
 import { registerSchema, RegisterInput } from '@/utils/validation';
 import { Image } from 'expo-image';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const { register, isLoading } = useAuth();
+  const [isLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { horizontalPadding, headingSize } = useResponsive();
   const insets = useSafeAreaInsets();
@@ -31,17 +31,10 @@ export default function RegisterScreen() {
     },
   });
 
-  const onSubmit = async (data: RegisterInput) => {
+  const onSubmit = async (_data: RegisterInput) => {
     setError(null);
-    const result = await register({
-      firstName: data.firstName,
-      lastName: data.lastName,
-      email: data.email,
-      password: data.password,
-    });
-    if (!result.success) {
-      setError(result.error || 'Registration failed');
-    }
+    // No backend auth yet — go straight to Home.
+    router.replace('/(tabs)');
   };
 
   const formFields: FormFieldConfig[] = [

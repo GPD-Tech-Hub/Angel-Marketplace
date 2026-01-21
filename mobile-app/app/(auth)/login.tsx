@@ -5,13 +5,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Image } from 'expo-image';
-import { useAuth, useResponsive } from '@/hooks';
+import { useResponsive } from '@/hooks';
 import { FormButton, FormField, type FormFieldConfig } from '@/components/ui';
 import { loginSchema, LoginInput } from '@/utils/validation';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, isLoading } = useAuth();
+  const [isLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { horizontalPadding, headingSize } = useResponsive();
   const insets = useSafeAreaInsets();
@@ -29,12 +29,10 @@ export default function LoginScreen() {
     },
   });
 
-  const onSubmit = async (data: LoginInput) => {
+  const onSubmit = async (_data: LoginInput) => {
     setError(null);
-    const result = await login(data);
-    if (!result.success) {
-      setError(result.error || 'Login failed');
-    }
+    // No backend auth yet — go straight to Home.
+    router.replace('/(tabs)');
   };
 
   const formFields: FormFieldConfig[] = [

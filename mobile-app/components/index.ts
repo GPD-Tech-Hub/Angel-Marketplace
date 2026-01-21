@@ -3,3 +3,7 @@ export * from './products';
 export * from './cart';
 export * from './orders';
 export * from './layout';
+export * from './home/CategoriesRow';
+export * from './home/HomeBanner';
+export * from './home/TrendingSection';
+export * from './home/TrendingProductCard';
