@@ -2,44 +2,33 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { Ionicons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks';
 import { FormButton, FormField } from '@/components/ui';
-import { forgotPasswordSchema, ForgotPasswordInput } from '@/utils/validation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { resetPasswordSchema } from '@/utils/validation';
 
-export default function ForgotPasswordScreen() {
+export default function ResetPasswordScreen() {
   const router = useRouter();
-  const [error, setError] = useState<string | null>(null);
   const { horizontalPadding, headingSize } = useResponsive();
   const insets = useSafeAreaInsets();
-  const [isLoading, setIsLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
   const {
     control,
     handleSubmit,
     formState: { errors, isValid },
-  } = useForm<ForgotPasswordInput>({
-    resolver: zodResolver(forgotPasswordSchema),
+  } = useForm<{ password: string; confirmPassword: string }>({
+    resolver: zodResolver(resetPasswordSchema),
     mode: 'onChange',
-    defaultValues: {
-      email: '',
-    },
+    defaultValues: { password: '', confirmPassword: '' },
   });
 
-  const onSubmit = async (data: ForgotPasswordInput) => {
-    setError(null);
-    // No verification yet — just proceed to the verify-code screen.
-    setIsLoading(true);
-    try {
-      router.push({
-        pathname: '/(auth)/verify-code',
-        params: { email: data.email },
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const onSubmit = () => {
+    // No backend yet — just go back to login for now.
+    setSubmitted(true);
+    router.push('/(auth)/login');
   };
 
   return (
@@ -71,34 +60,44 @@ export default function ForgotPasswordScreen() {
             </Pressable>
 
             {/* Header */}
-            <View className="mb-6">
+            <View className="mb-10">
               <Text className={`${headingSize} font-bold text-black mb-3`}>
-                Forgot password
+                Reset password
               </Text>
               <Text className="text-base text-gray-500 leading-6">
-                Enter your email address for the verification process. We will send a 4 digit code to your email
+                Set the new password for your account so you can login and access all the features.
               </Text>
             </View>
 
-            {/* Error Message */}
-            {error && (
-              <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
-                <Text className="text-red-600 text-sm">{error}</Text>
-              </View>
-            )}
+            {/* New Password */}
+            <View className="mb-2">
+              <FormField
+                control={control}
+                name="password"
+                label="New Password"
+                placeholder="Enter new password"
+                type="password"
+                autoCapitalize="none"
+                autoComplete="password"
+                required={true}
+                error={(errors as any).password}
+              />
+            </View>
 
-            {/* Email Field */}
-            <FormField
-              control={control}
-              name="email"
-              label="Email Address"
-              placeholder="Enter your email address"
-              type="email"
-              autoCapitalize="none"
-              autoComplete="email"
-              required={true}
-              error={(errors as any).email}
-            />
+            {/* Confirm New Password */}
+            <View>
+              <FormField
+                control={control}
+                name="confirmPassword"
+                label="Confirm New Password"
+                placeholder="Confirm new password"
+                type="password"
+                autoCapitalize="none"
+                autoComplete="password"
+                required={true}
+                error={(errors as any).confirmPassword}
+              />
+            </View>
           </ScrollView>
 
           {/* Bottom sticky button */}
@@ -111,10 +110,9 @@ export default function ForgotPasswordScreen() {
             }}
           >
             <FormButton
-              title={isLoading ? 'Sending...' : 'Send Code'}
+              title="Send Code"
               onPress={handleSubmit(onSubmit)}
-              loading={isLoading}
-              disabled={!isValid || isLoading}
+              disabled={!isValid}
               variant="primary"
               backgroundColor={isValid ? '#F43F5E' : '#F3F4F6'}
               textColor={isValid ? '#FFFFFF' : '#000000'}
@@ -125,3 +123,4 @@ export default function ForgotPasswordScreen() {
     </SafeAreaView>
   );
 }
+

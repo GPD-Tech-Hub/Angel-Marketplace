@@ -1,26 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useForm, Controller } from 'react-hook-form';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@/hooks';
-import { Button, Input } from '@/components/ui';
+import { Image } from 'expo-image';
+import { useAuth, useResponsive } from '@/hooks';
+import { FormButton, FormField, type FormFieldConfig } from '@/components/ui';
 import { loginSchema, LoginInput } from '@/utils/validation';
-import { config } from '@/constants/config';
 
 export default function LoginScreen() {
   const router = useRouter();
   const { login, isLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const { horizontalPadding, headingSize } = useResponsive();
+  const insets = useSafeAreaInsets();
 
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
+    mode: 'onChange',
     defaultValues: {
       email: '',
       password: '',
@@ -35,124 +37,142 @@ export default function LoginScreen() {
     }
   };
 
+  const formFields: FormFieldConfig[] = [
+    {
+      name: 'email',
+      label: 'Email Address',
+      placeholder: 'Enter email address',
+      type: 'email',
+      autoCapitalize: 'none',
+      autoComplete: 'email',
+      required: true,
+    },
+    {
+      name: 'password',
+      label: 'Password',
+      placeholder: 'Enter password',
+      type: 'password',
+      autoCapitalize: 'none',
+      autoComplete: 'password',
+      required: true,
+    },
+  ];
+
+  const forgotPassword = (
+    <View className="flex-row justify-start">
+      <Text className="text-[#737373] text-base">Forgot your password? </Text>
+      <Pressable onPress={() => router.push('/(auth)/forgot-password')}>
+        {({ pressed }) => (
+          <Text className={`text-[#F43F5E] text-base ${pressed ? 'opacity-70' : ''}`}>
+            Reset your password
+          </Text>
+        )}
+      </Pressable>
+    </View>
+  );
+
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
-        <ScrollView
-          className="flex-1"
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Header */}
-          <View className="px-6 pt-8">
-            <TouchableOpacity
-              className="w-10 h-10 items-center justify-center -ml-2"
-              onPress={() => router.back()}
-            >
-              <Ionicons name="arrow-back" size={24} color="#374151" />
-            </TouchableOpacity>
-          </View>
-
-          {/* Content */}
-          <View className="flex-1 px-6 pt-8">
-            <Text className="text-3xl font-bold text-gray-900 mb-2">
-              Welcome Back
-            </Text>
-            <Text className="text-gray-500 mb-8">
-              Sign in to continue to {config.APP_NAME}
-            </Text>
+        <View className="flex-1">
+          <ScrollView
+            className="flex-1"
+            contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 16 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+          >
+            {/* Header */}
+            <View className="mb-10 mt-4">
+              <Text className={`${headingSize} font-bold text-black mb-2`}>
+                Login to your account
+              </Text>
+              <Text className="text-base text-gray-500">
+                It's so great to see you again
+              </Text>
+            </View>
 
             {/* Error Message */}
             {error && (
-              <View className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-                <Text className="text-red-600">{error}</Text>
+              <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+                <Text className="text-red-600 text-sm">{error}</Text>
               </View>
             )}
 
-            {/* Form */}
-            <Controller
-              control={control}
-              name="email"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Email"
-                  placeholder="Enter your email"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  autoComplete="email"
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.email?.message}
-                  leftIcon={<Ionicons name="mail-outline" size={20} color="#9ca3af" />}
-                />
-              )}
-            />
+            {/* Fields */}
+            {formFields.map((field) => (
+              <FormField
+                key={field.name}
+                control={control}
+                name={field.name}
+                label={field.label}
+                placeholder={field.placeholder}
+                type={field.type}
+                autoCapitalize={field.autoCapitalize}
+                autoComplete={field.autoComplete}
+                required={field.required}
+                error={(errors as any)[field.name]}
+              />
+            ))}
 
-            <Controller
-              control={control}
-              name="password"
-              render={({ field: { onChange, onBlur, value } }) => (
-                <Input
-                  label="Password"
-                  placeholder="Enter your password"
-                  isPassword
-                  value={value}
-                  onChangeText={onChange}
-                  onBlur={onBlur}
-                  error={errors.password?.message}
-                  leftIcon={<Ionicons name="lock-closed-outline" size={20} color="#9ca3af" />}
-                />
-              )}
-            />
+            {/* Forgot password (left aligned) */}
+            <View className="mt-1">
+              {forgotPassword}
+            </View>
+          </ScrollView>
 
-            {/* Forgot Password */}
-            <TouchableOpacity
-              className="self-end mb-6"
-              onPress={() => router.push('/(auth)/forgot-password')}
-            >
-              <Text className="text-primary-600 font-medium">Forgot Password?</Text>
-            </TouchableOpacity>
-
-            {/* Submit Button */}
-            <Button
-              title="Sign In"
+          {/* Bottom sticky actions */}
+          <View
+            className="bg-white"
+            style={{
+              paddingHorizontal: horizontalPadding,
+              paddingTop: 12,
+              paddingBottom: insets.bottom + 28,
+            }}
+          >
+            <FormButton
+              title={isLoading ? 'Logging in...' : 'Login'}
               onPress={handleSubmit(onSubmit)}
               loading={isLoading}
-              fullWidth
-              size="lg"
+              disabled={!isValid || isLoading}
+              variant="primary"
+              backgroundColor={isValid ? '#F43F5E' : '#F3F4F6'}
+              textColor={isValid ? '#FFFFFF' : '#000000'}
             />
 
-            {/* Divider */}
-            <View className="flex-row items-center my-8">
-              <View className="flex-1 h-px bg-gray-200" />
-              <Text className="mx-4 text-gray-500">or</Text>
-              <View className="flex-1 h-px bg-gray-200" />
+            <View className="items-center my-3">
+              <Text className="text-gray-500 font-medium text-sm">OR</Text>
             </View>
 
-            {/* Social Login */}
-            <Button
-              title="Continue with Google"
-              variant="outline"
-              onPress={() => {}}
-              fullWidth
-              icon={<Ionicons name="logo-google" size={20} color="#0284c7" />}
+            <FormButton
+              title="Sign Up with KingsChat"
+              onPress={() => {
+                // Handle KingsChat auth
+              }}
+              variant="secondary"
+              rightElement={(
+                <Image
+                  source={require('../../assets/icons/KC.png')}
+                  style={{ width: 22, height: 22, marginLeft: 8 }}
+                  contentFit="contain"
+                />
+              )}
             />
-          </View>
 
-          {/* Footer */}
-          <View className="px-6 py-8">
-            <View className="flex-row justify-center">
-              <Text className="text-gray-500">Don't have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-                <Text className="text-primary-600 font-semibold">Sign Up</Text>
-              </TouchableOpacity>
+            <View className="flex-row justify-center items-center mt-3">
+              <Text className="text-[#737373] text-base">Don't have an account? </Text>
+              <Pressable onPress={() => router.push('/(auth)/register')}>
+                {({ pressed }) => (
+                  <Text className={`text-[#F43F5E] font-medium text-base ${pressed ? 'opacity-70' : ''}`}>
+                    Sign Up
+                  </Text>
+                )}
+              </Pressable>
             </View>
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -1,25 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import { View, Text, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useForm, Controller } from 'react-hook-form';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuth } from '@/hooks';
+import { useAuth, useResponsive } from '@/hooks';
+import { FormButton, FormField, type FormFieldConfig } from '@/components/ui';
 import { registerSchema, RegisterInput } from '@/utils/validation';
+import { Image } from 'expo-image';
 
 export default function RegisterScreen() {
   const router = useRouter();
   const { register, isLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
-  const [showPassword, setShowPassword] = useState(false);
+  const { horizontalPadding, headingSize } = useResponsive();
+  const insets = useSafeAreaInsets();
 
   const {
     control,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
+    mode: 'onChange',
     defaultValues: {
       firstName: '',
       lastName: '',
@@ -41,206 +44,154 @@ export default function RegisterScreen() {
     }
   };
 
+  const formFields: FormFieldConfig[] = [
+    {
+      name: 'firstName',
+      label: 'First Name',
+      placeholder: 'Enter your first name',
+      type: 'text',
+      autoCapitalize: 'words',
+      required: true,
+    },
+    {
+      name: 'lastName',
+      label: 'Last Name',
+      placeholder: 'Enter your last name',
+      type: 'text',
+      autoCapitalize: 'words',
+      required: true,
+    },
+    {
+      name: 'email',
+      label: 'Email Address',
+      placeholder: 'Enter your email address',
+      type: 'email',
+      autoCapitalize: 'none',
+      autoComplete: 'email',
+      required: true,
+    },
+    {
+      name: 'password',
+      label: 'Password',
+      placeholder: 'Enter your password',
+      type: 'password',
+      autoCapitalize: 'none',
+      autoComplete: 'password',
+      required: true,
+    },
+  ];
+
+  const footerText = (
+    <Text className="text-sm text-gray-600 text-center">
+      By signing up you agree to our{' '}
+      <Text className="text-[#F43F5E]">Terms</Text>,{' '}
+      <Text className="text-[#F43F5E]">Privacy Policy</Text>, and{' '}
+      <Text className="text-[#F43F5E]">Cookie Use</Text>
+    </Text>
+  );
+
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1"
       >
-        <ScrollView
-          className="flex-1 px-6"
-          contentContainerStyle={{ flexGrow: 1, paddingTop: 20 }}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Header */}
-          <View className="mb-8">
-            <Text className="text-4xl font-bold text-black mb-2">
-              Create an account
-            </Text>
-            <Text className="text-base text-gray-500">
-              Let's create your account.
-            </Text>
-          </View>
-
-          {/* Error Message */}
-          {error && (
-            <View className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-              <Text className="text-red-600">{error}</Text>
-            </View>
-          )}
-
-          {/* Form */}
-          <View className="mb-6">
-            {/* First Name */}
-            <View className="mb-5">
-              <Text className="text-base font-semibold text-black mb-2">
-                First Name
+        <View className="flex-1">
+          <ScrollView
+            className="flex-1"
+            contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 16 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={true}
+          >
+            {/* Header */}
+            <View className="mb-10 mt-4">
+              <Text className={`${headingSize} font-bold text-black mb-2`}>
+                Create an account
               </Text>
-              <Controller
-                control={control}
-                name="firstName"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <View>
-                    <View className={`bg-gray-50 rounded-xl border ${errors.firstName ? 'border-red-500' : 'border-gray-200'}`}>
-                      <TextInput
-                        className="w-full px-4 py-4 text-base text-black"
-                        placeholder="Enter your first name"
-                        placeholderTextColor="#9ca3af"
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        autoCapitalize="words"
-                      />
-                    </View>
-                    {errors.firstName && (
-                      <Text className="text-red-500 text-xs mt-1">{errors.firstName.message}</Text>
-                    )}
-                  </View>
-                )}
-              />
-            </View>
-
-            {/* Last Name */}
-            <View className="mb-5">
-              <Text className="text-base font-semibold text-black mb-2">
-                Last Name
+              <Text className="text-base text-gray-500">
+                Let's create your account.
               </Text>
-              <Controller
-                control={control}
-                name="lastName"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <View>
-                    <View className={`bg-gray-50 rounded-xl border ${errors.lastName ? 'border-red-500' : 'border-gray-200'}`}>
-                      <TextInput
-                        className="w-full px-4 py-4 text-base text-black"
-                        placeholder="Enter your last name"
-                        placeholderTextColor="#9ca3af"
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        autoCapitalize="words"
-                      />
-                    </View>
-                    {errors.lastName && (
-                      <Text className="text-red-500 text-xs mt-1">{errors.lastName.message}</Text>
-                    )}
-                  </View>
-                )}
-              />
             </View>
 
-            {/* Email Address */}
-            <View className="mb-5">
-              <Text className="text-base font-semibold text-black mb-2">
-                Email Address
-              </Text>
-              <Controller
+            {/* Error Message */}
+            {error && (
+              <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+                <Text className="text-red-600 text-sm">{error}</Text>
+              </View>
+            )}
+
+            {/* Fields */}
+            {formFields.map((field) => (
+              <FormField
+                key={field.name}
                 control={control}
-                name="email"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <View>
-                    <View className={`bg-gray-50 rounded-xl border ${errors.email ? 'border-red-500' : 'border-gray-200'}`}>
-                      <TextInput
-                        className="w-full px-4 py-4 text-base text-black"
-                        placeholder="Enter your email address"
-                        placeholderTextColor="#9ca3af"
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoCorrect={false}
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                      />
-                    </View>
-                    {errors.email && (
-                      <Text className="text-red-500 text-xs mt-1">{errors.email.message}</Text>
-                    )}
-                  </View>
-                )}
+                name={field.name}
+                label={field.label}
+                placeholder={field.placeholder}
+                type={field.type}
+                autoCapitalize={field.autoCapitalize}
+                autoComplete={field.autoComplete}
+                required={field.required}
+                error={(errors as any)[field.name]}
               />
+            ))}
+
+            {/* Terms (above bottom area, scrolls with fields) */}
+            <View className="mt-1">
+              {footerText}
             </View>
+          </ScrollView>
 
-            {/* Password */}
-            <View className="mb-6">
-              <Text className="text-base font-semibold text-black mb-2">
-                Password
-              </Text>
-              <Controller
-                control={control}
-                name="password"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <View>
-                    <View className={`bg-gray-50 rounded-xl border ${errors.password ? 'border-red-500' : 'border-gray-200'} flex-row items-center px-4`}>
-                      <TextInput
-                        className="flex-1 py-4 text-base text-black"
-                        placeholder="Enter your password"
-                        placeholderTextColor="#9ca3af"
-                        secureTextEntry={!showPassword}
-                        value={value}
-                        onChangeText={onChange}
-                        onBlur={onBlur}
-                        autoCapitalize="none"
-                      />
-                      <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                        <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={24} color="#6b7280" />
-                      </TouchableOpacity>
-                    </View>
-                    {errors.password && (
-                      <Text className="text-red-500 text-xs mt-1">{errors.password.message}</Text>
-                    )}
-                  </View>
-                )}
-              />
-            </View>
-
-            {/* Terms */}
-            <Text className="text-sm text-gray-600 mb-8">
-              By signing up you agree to our{' '}
-              <Text className="text-red-500">Terms</Text>,{' '}
-              <Text className="text-red-500">Privacy Policy</Text>, and{' '}
-              <Text className="text-red-500">Cookie Use</Text>
-            </Text>
-
-            {/* Create Account Button */}
-            <TouchableOpacity
+          {/* Bottom sticky actions */}
+          <View
+            className="bg-white"
+            style={{
+              paddingHorizontal: horizontalPadding,
+              paddingTop: 12,
+              paddingBottom: insets.bottom + 28,
+            }}
+          >
+            <FormButton
+              title={isLoading ? 'Creating account...' : 'Create account'}
               onPress={handleSubmit(onSubmit)}
-              disabled={isLoading}
-              className="w-full bg-gray-100 rounded-xl py-4 mb-4"
-              activeOpacity={0.7}
-            >
-              <Text className="text-center text-base font-semibold text-black">
-                {isLoading ? 'Creating account...' : 'Create account'}
-              </Text>
-            </TouchableOpacity>
+              loading={isLoading}
+              disabled={!isValid || isLoading}
+              variant="primary"
+              backgroundColor={isValid ? '#F43F5E' : '#F3F4F6'}
+              textColor={isValid ? '#FFFFFF' : '#000000'}
+            />
 
-            {/* OR Divider */}
-            <View className="flex-row items-center mb-4">
-              <View className="flex-1 h-px bg-gray-200" />
-              <Text className="mx-4 text-gray-500 font-medium">OR</Text>
-              <View className="flex-1 h-px bg-gray-200" />
+            <View className="items-center my-3">
+              <Text className="text-gray-500 font-medium text-sm">OR</Text>
             </View>
 
-            {/* Sign Up with KingsChat Button */}
-            <TouchableOpacity
-              className="w-full bg-blue-500 rounded-xl py-4 flex-row items-center justify-center mb-6"
-              activeOpacity={0.7}
-            >
-              <Ionicons name="chatbubble-ellipses" size={20} color="white" />
-              <Text className="text-center text-base font-semibold text-white ml-2">
-                Sign Up with KingsChat
-              </Text>
-            </TouchableOpacity>
+            <FormButton
+              title="Sign Up with KingsChat"
+              onPress={() => {
+                // Handle KingsChat signup
+              }}
+              variant="secondary"
+              rightElement={(
+                <Image
+                  source={require('../../assets/icons/KC.png')}
+                  style={{ width: 22, height: 22, marginLeft: 8 }}
+                  contentFit="contain"
+                />
+              )}
+            />
 
-            {/* Footer */}
-            <View className="flex-row justify-center">
-              <Text className="text-gray-600">Already have an account? </Text>
-              <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-                <Text className="text-red-500 font-medium">Log In</Text>
-              </TouchableOpacity>
+            <View className="flex-row justify-center items-center mt-3">
+              <Text className="text-[#737373] text-base">Already have an account? </Text>
+              <Pressable onPress={() => router.push('/(auth)/login')}>
+                {({ pressed }) => (
+                  <Text className={`text-[#F43F5E] font-medium text-base ${pressed ? 'opacity-70' : ''}`}>
+                    Log In
+                  </Text>
+                )}
+              </Pressable>
             </View>
           </View>
-        </ScrollView>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
