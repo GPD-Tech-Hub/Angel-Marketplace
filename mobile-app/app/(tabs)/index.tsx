@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { useResponsive } from '@/hooks';
 import { homeTopSectionStyles as styles } from '@/styles/homeTopSection';
 import { DiscoverSearchBar } from '@/components/layout/DiscoverSearchBar';
@@ -16,6 +17,7 @@ import { TrendingSection } from '@/components/home/TrendingSection';
 import type { TrendingProduct } from '@/components/home/TrendingProductCard';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { horizontalPadding } = useResponsive();
   const categoryItems: CategoryItem[] = [
     { id: 'apparels', label: 'Apparels', image: require('../../assets/image/image 5.png') },
@@ -45,7 +47,7 @@ export default function HomeScreen() {
             <Pressable
               style={styles.iconButton}
               onPress={() => {
-                // TODO: notifications
+                router.push('/notifications' as any);
               }}
             >
               {({ pressed }) => (

@@ -33,15 +33,15 @@ export const bottomNavBarStyles = StyleSheet.create({
     justifyContent: 'center',
   },
   iconContainer: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
     marginBottom: 4,
     alignItems: 'center',
     justifyContent: 'center',
   },
   icon: {
-    width: 24,
-    height: 24,
+    width: 20,
+    height: 20,
   },
   label: {
     fontSize: 11,
