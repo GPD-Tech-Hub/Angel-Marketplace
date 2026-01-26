@@ -38,14 +38,14 @@ export default function TabLayout() {
           name="saved"
           options={{
             title: 'Saved',
-            headerShown: true,
+            headerShown: false,
           }}
         />
         <Tabs.Screen
           name="cart"
           options={{
             title: 'Cart',
-            headerShown: true,
+            headerShown: false,
           }}
         />
         <Tabs.Screen

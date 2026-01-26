@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleProp, ViewStyle, useWindowDimensions } from
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { trendingProductCardStyles as styles } from '@/styles/trendingProductCard';
+import { useFavoritesStore } from '@/store';
 
 export type TrendingProduct = {
   id: string;
@@ -23,6 +24,7 @@ export function TrendingProductCard({ item, style, onPress, onFavoritePress }: P
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
   const starSize = Math.round(13 * scale);
+  const isFavorite = useFavoritesStore((state) => state.isFavorite(item.id));
 
   return (
     <Pressable
@@ -40,11 +42,18 @@ export function TrendingProductCard({ item, style, onPress, onFavoritePress }: P
               hitSlop={10}
             >
               {({ pressed: favPressed }) => (
-                <Image
-                  source={require('../../assets/icons/favorite.png')}
-                  style={[styles.favIcon, { opacity: favPressed ? 0.7 : 1 }]}
-                  contentFit="contain"
-                />
+                <View style={[styles.favButtonInner, isFavorite && styles.favButtonActive, { opacity: favPressed ? 0.8 : 1 }]}>
+                  <Image
+                    source={
+                      isFavorite
+                        ? require('../../assets/icons/Heart-duotone.png')
+                        : require('../../assets/icons/favorite.png')
+                    }
+                    style={styles.favIcon}
+                    contentFit="contain"
+                    tintColor={isFavorite ? '#FFFFFF' : undefined}
+                  />
+                </View>
               )}
             </Pressable>
           </View>

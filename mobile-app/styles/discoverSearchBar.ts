@@ -4,7 +4,7 @@ export const discoverSearchBarStyles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 16,
+    marginTop: 0,
   },
   searchBox: {
     flex: 1,

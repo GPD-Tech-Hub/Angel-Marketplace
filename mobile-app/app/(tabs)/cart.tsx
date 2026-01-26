@@ -1,77 +1,93 @@
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useCart } from '@/hooks';
-import { CartItem, CartSummary } from '@/components/cart';
-import { Button } from '@/components/ui';
+import { CartItemCard, OrderSummary, CheckoutButton } from '@/components/cart';
+import { cartScreenStyles as styles } from '@/styles/cartScreen';
 
 export default function CartScreen() {
   const router = useRouter();
-  const { items, itemCount, subtotal, clearCart } = useCart();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const scale = Math.max(0.9, Math.min(1.0, width / 390));
+  
+  const { items, itemCount, subtotal } = useCart();
 
   const handleCheckout = () => {
-    router.push('/checkout');
+    // TODO: Navigate to checkout screen
+    console.log('Proceed to checkout');
   };
 
-  const handleContinueShopping = () => {
-    router.push('/(tabs)');
-  };
-
-  if (itemCount === 0) {
-    return (
-      <View className="flex-1 bg-gray-50 items-center justify-center px-6">
-        <View className="w-24 h-24 bg-gray-100 rounded-full items-center justify-center mb-6">
-          <Ionicons name="cart-outline" size={48} color="#9ca3af" />
-        </View>
-        <Text className="text-xl font-semibold text-gray-900 mb-2">
-          Your cart is empty
-        </Text>
-        <Text className="text-gray-500 text-center mb-6">
-          Looks like you haven't added anything to your cart yet
-        </Text>
-        <Button
-          title="Start Shopping"
-          onPress={handleContinueShopping}
-          fullWidth
-        />
-      </View>
-    );
-  }
+  // Mock VAT calculation (0% in the design)
+  const vat = 0;
+  const shippingFee = 80;
+  const total = subtotal + vat + shippingFee;
 
   return (
-    <View className="flex-1 bg-gray-50">
-      <ScrollView className="flex-1 px-4 pt-4" showsVerticalScrollIndicator={false}>
-        {/* Cart Items Header */}
-        <View className="flex-row items-center justify-between mb-4">
-          <Text className="text-lg font-semibold text-gray-900">
-            Cart ({itemCount} {itemCount === 1 ? 'item' : 'items'})
-          </Text>
-          <TouchableOpacity onPress={clearCart}>
-            <Text className="text-red-500 font-medium">Clear All</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Cart Items */}
-        {items.map((item) => (
-          <CartItem key={item.id} item={item} />
-        ))}
-
-        {/* Order Summary */}
-        <View className="mt-4 mb-6">
-          <CartSummary subtotal={subtotal} />
-        </View>
-      </ScrollView>
-
-      {/* Checkout Button */}
-      <View className="px-4 py-4 bg-white border-t border-gray-100">
-        <Button
-          title={`Checkout - ${subtotal.toFixed(2)}`}
-          onPress={handleCheckout}
-          fullWidth
-          size="lg"
-        />
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Custom Header */}
+      <View style={styles.header}>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => router.back()}
+          hitSlop={10}
+        >
+          {({ pressed }) => (
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color="#111827"
+              style={{ opacity: pressed ? 0.7 : 1 }}
+            />
+          )}
+        </Pressable>
+        <Text style={[styles.headerTitle, { fontSize: Math.round(20 * scale) }]}>
+          My Cart
+        </Text>
+        <View style={styles.headerSpacer} />
       </View>
-    </View>
+
+      {/* Scrollable Content */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Cart Items */}
+        {items.length > 0 ? (
+          <>
+            {items.map((item) => (
+              <CartItemCard key={item.id} item={item} />
+            ))}
+
+            {/* Order Summary */}
+            <OrderSummary
+              subtotal={subtotal}
+              vat={vat}
+              shippingFee={shippingFee}
+              total={total}
+            />
+
+            {/* Checkout Button */}
+            <CheckoutButton onPress={handleCheckout} />
+
+            {/* Bottom spacing for safe area */}
+            <View style={{ height: Math.max(insets.bottom, 20) + 80 }} />
+          </>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="cart-outline" size={64} color="#9CA3AF" />
+            <Text style={[styles.emptyTitle, { fontSize: Math.round(20 * scale) }]}>
+              Your cart is empty
+            </Text>
+            <Text style={[styles.emptyMessage, { fontSize: Math.round(14 * scale) }]}>
+              Looks like you haven't added anything to your cart yet
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+    </SafeAreaView>
   );
 }

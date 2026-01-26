@@ -1,14 +1,15 @@
 import { StyleSheet } from 'react-native';
 
-export const trendingProductCardStyles = StyleSheet.create({
+export const savedProductCardStyles = StyleSheet.create({
   card: {
     flex: 1,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   imageWrap: {
     borderRadius: 16,
     overflow: 'hidden',
     backgroundColor: '#E5E7EB',
+    position: 'relative',
   },
   image: {
     width: '100%',
@@ -23,7 +24,7 @@ export const trendingProductCardStyles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F43F5E',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -31,16 +32,14 @@ export const trendingProductCardStyles = StyleSheet.create({
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 3,
-  },
-  favButtonActive: {
-    backgroundColor: '#F43F5E',
+    elevation: 4,
   },
   favIcon: {
     width: 20,
     height: 20,
+    tintColor: '#FFFFFF',
   },
   name: {
     marginTop: 8,
@@ -70,4 +69,3 @@ export const trendingProductCardStyles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-
