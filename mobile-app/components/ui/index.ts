@@ -8,3 +8,4 @@ export { Form, type FormFieldConfig } from './Form';
 export { FormField } from './FormField';
 export { FormButton } from './FormButton';
 export { OTPInput } from './OTPInput';
+export { SuccessModal } from './SuccessModal';

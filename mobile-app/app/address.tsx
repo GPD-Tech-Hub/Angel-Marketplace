@@ -52,8 +52,7 @@ export default function AddressScreen() {
   };
 
   const handleAddNewAddress = () => {
-    // TODO: Navigate to add new address screen
-    console.log('Add new address');
+    router.push('/new-address');
   };
 
   return (
