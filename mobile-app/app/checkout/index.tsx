@@ -37,8 +37,7 @@ export default function CheckoutScreen() {
   };
 
   const handleChangeAddress = () => {
-    // TODO: Navigate to address selection
-    console.log('Change address');
+    router.push('/address');
   };
 
   const handleEditCard = () => {
@@ -85,7 +84,7 @@ export default function CheckoutScreen() {
         <DeliveryAddress
           addressLabel={MOCK_ADDRESS.label}
           address={MOCK_ADDRESS.address}
-          onChangePress={handleChangeAddress}
+          onNavigateToAddress={handleChangeAddress}
         />
 
         {/* Divider */}

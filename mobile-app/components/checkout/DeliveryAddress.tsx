@@ -7,12 +7,14 @@ type Props = {
   addressLabel?: string;
   address: string;
   onChangePress?: () => void;
+  onNavigateToAddress?: () => void;
 };
 
 export function DeliveryAddress({
   addressLabel = 'Home',
   address,
   onChangePress,
+  onNavigateToAddress,
 }: Props) {
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
@@ -24,7 +26,7 @@ export function DeliveryAddress({
         <Text style={[styles.title, { fontSize: Math.round(16 * scale) }]}>
           Delivery Address
         </Text>
-        <Pressable onPress={onChangePress} hitSlop={10}>
+        <Pressable onPress={onNavigateToAddress || onChangePress} hitSlop={10}>
           {({ pressed }) => (
             <Text
               style={[
