@@ -17,9 +17,27 @@ export function CartItemCard({ item }: Props) {
   const { product, quantity, price } = item;
 
   // Use first image from product, or fallback
-  const productImage = product.images && product.images.length > 0 
-    ? { uri: product.images[0] }
-    : require('../../assets/image/image 2.jpg');
+  // Handle both local require() images and URI strings
+  const getProductImage = () => {
+    if (!product.images || product.images.length === 0) {
+      return require('../../assets/image/image 2.jpg');
+    }
+    
+    const imagePath = product.images[0];
+    
+    // If it's a local image name (for mock data), convert to require
+    if (imagePath === 'image 2.jpg') {
+      return require('../../assets/image/image 2.jpg');
+    }
+    if (imagePath === 'image 1.jpg') {
+      return require('../../assets/image/image 1.jpg');
+    }
+    
+    // Otherwise, treat as URI
+    return { uri: imagePath };
+  };
+  
+  const productImage = getProductImage();
 
   // Mock size - in real app, this would come from the cart item
   const size = 'L';
@@ -59,44 +77,49 @@ export function CartItemCard({ item }: Props) {
           Size {size}
         </Text>
 
-        {/* Price */}
-        <Text style={[styles.priceText, { fontSize: Math.round(16 * scale) }]}>
-          $ {price.toLocaleString('en-US')}
-        </Text>
-
-        {/* Quantity Controls */}
-        <View style={styles.quantityContainer}>
-          <Pressable
-            style={styles.quantityButton}
-            onPress={handleDecrement}
-            hitSlop={10}
-          >
-            {({ pressed }) => (
-              <Ionicons
-                name="remove"
-                size={Math.round(16 * scale)}
-                color="#111827"
-                style={{ opacity: pressed ? 0.7 : 1 }}
-              />
-            )}
-          </Pressable>
-          <Text style={[styles.quantityText, { fontSize: Math.round(16 * scale) }]}>
-            {quantity}
+        {/* Price and Quantity Controls Row */}
+        <View style={styles.priceQuantityRow}>
+          {/* Price */}
+          <Text style={[styles.priceText, { fontSize: Math.round(16 * scale) }]}>
+            $ {price.toLocaleString('en-US')}
           </Text>
-          <Pressable
-            style={styles.quantityButton}
-            onPress={handleIncrement}
-            hitSlop={10}
-          >
-            {({ pressed }) => (
-              <Ionicons
-                name="add"
-                size={Math.round(16 * scale)}
-                color="#111827"
-                style={{ opacity: pressed ? 0.7 : 1 }}
-              />
-            )}
-          </Pressable>
+
+          {/* Quantity Controls */}
+          <View style={styles.quantityContainer}>
+            <Pressable
+              style={styles.quantityButton}
+              onPress={handleDecrement}
+              hitSlop={10}
+            >
+              {({ pressed }) => (
+                <Ionicons
+                  name="remove"
+                  size={Math.round(16 * scale)}
+                  color="#111827"
+                  style={{ opacity: pressed ? 0.7 : 1 }}
+                />
+              )}
+            </Pressable>
+            <View style={styles.quantityDivider} />
+            <Text style={[styles.quantityText, { fontSize: Math.round(16 * scale) }]}>
+              {quantity}
+            </Text>
+            <View style={styles.quantityDivider} />
+            <Pressable
+              style={styles.quantityButton}
+              onPress={handleIncrement}
+              hitSlop={10}
+            >
+              {({ pressed }) => (
+                <Ionicons
+                  name="add"
+                  size={Math.round(16 * scale)}
+                  color="#111827"
+                  style={{ opacity: pressed ? 0.7 : 1 }}
+                />
+              )}
+            </Pressable>
+          </View>
         </View>
       </View>
 

@@ -16,7 +16,8 @@ export default function CheckoutLayout() {
       <Stack.Screen
         name="index"
         options={{
-          title: 'Shipping',
+          title: 'Checkout',
+          headerShown: false,
         }}
       />
       <Stack.Screen

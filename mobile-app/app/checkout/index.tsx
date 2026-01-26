@@ -1,215 +1,138 @@
 import React from 'react';
-import { View, Text, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Input } from '@/components/ui';
-import { addressSchema, AddressInput } from '@/utils/validation';
+import { Ionicons } from '@expo/vector-icons';
+import { useCart } from '@/hooks';
+import {
+  DeliveryAddress,
+  PaymentMethodSelector,
+  CouponCodeInput,
+} from '@/components/checkout';
+import { OrderSummary } from '@/components/cart';
+import { checkoutScreenStyles as styles } from '@/styles/checkoutScreen';
 
-export default function ShippingScreen() {
+// Mock data
+const MOCK_ADDRESS = {
+  label: 'Home',
+  address: '925 S Chugach St #APT 10, Alaska 99645',
+};
+
+export default function CheckoutScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+  const scale = Math.max(0.9, Math.min(1.0, width / 390));
 
-  const {
-    control,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<AddressInput>({
-    resolver: zodResolver(addressSchema),
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-      address: '',
-      apartment: '',
-      city: '',
-      state: '',
-      zipCode: '',
-      country: 'United States',
-      phone: '',
-    },
-  });
+  const { subtotal } = useCart();
 
-  const onSubmit = (data: AddressInput) => {
-    // Store shipping address and navigate to payment
-    router.push({
-      pathname: '/checkout/payment',
-      params: { shippingAddress: JSON.stringify(data) },
-    });
+  // Mock calculations
+  const vat = 0;
+  const shippingFee = 80;
+  const total = subtotal + vat + shippingFee;
+
+  const handlePlaceOrder = () => {
+    // TODO: Implement place order logic
+    console.log('Place order');
+  };
+
+  const handleChangeAddress = () => {
+    // TODO: Navigate to address selection
+    console.log('Change address');
+  };
+
+  const handleEditCard = () => {
+    // TODO: Navigate to card editing
+    console.log('Edit card');
+  };
+
+  const handleCouponAdd = (code: string) => {
+    // TODO: Apply coupon code
+    console.log('Apply coupon:', code);
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
-    >
-      <ScrollView className="flex-1 bg-gray-50 px-4 pt-4">
-        <Text className="text-lg font-semibold text-gray-900 mb-4">
-          Shipping Address
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable
+          style={styles.backButton}
+          onPress={() => router.back()}
+          hitSlop={10}
+        >
+          {({ pressed }) => (
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color="#111827"
+              style={{ opacity: pressed ? 0.7 : 1 }}
+            />
+          )}
+        </Pressable>
+        <Text style={[styles.headerTitle, { fontSize: Math.round(20 * scale) }]}>
+          Checkout
         </Text>
+        <View style={styles.headerSpacer} />
+      </View>
 
-        <View className="bg-white rounded-xl p-4 mb-4">
-          <View className="flex-row gap-4">
-            <View className="flex-1">
-              <Controller
-                control={control}
-                name="firstName"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <Input
-                    label="First Name"
-                    placeholder="John"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    error={errors.firstName?.message}
-                  />
-                )}
-              />
-            </View>
-            <View className="flex-1">
-              <Controller
-                control={control}
-                name="lastName"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <Input
-                    label="Last Name"
-                    placeholder="Doe"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    error={errors.lastName?.message}
-                  />
-                )}
-              />
-            </View>
-          </View>
+      {/* Scrollable Content */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Delivery Address */}
+        <DeliveryAddress
+          addressLabel={MOCK_ADDRESS.label}
+          address={MOCK_ADDRESS.address}
+          onChangePress={handleChangeAddress}
+        />
 
-          <Controller
-            control={control}
-            name="address"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Street Address"
-                placeholder="123 Main Street"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.address?.message}
-              />
-            )}
-          />
+        {/* Divider */}
+        <View style={styles.divider} />
 
-          <Controller
-            control={control}
-            name="apartment"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Apartment, suite, etc. (optional)"
-                placeholder="Apt 4B"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.apartment?.message}
-              />
-            )}
-          />
+        {/* Payment Method */}
+        <PaymentMethodSelector
+          selectedMethod="card"
+          cardNumber="**** **** **** 2512"
+          onEditCard={handleEditCard}
+        />
 
-          <View className="flex-row gap-4">
-            <View className="flex-1">
-              <Controller
-                control={control}
-                name="city"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <Input
-                    label="City"
-                    placeholder="New York"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    error={errors.city?.message}
-                  />
-                )}
-              />
-            </View>
-            <View className="flex-1">
-              <Controller
-                control={control}
-                name="state"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <Input
-                    label="State"
-                    placeholder="NY"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    error={errors.state?.message}
-                  />
-                )}
-              />
-            </View>
-          </View>
+        {/* Divider */}
+        <View style={styles.divider} />
 
-          <View className="flex-row gap-4">
-            <View className="flex-1">
-              <Controller
-                control={control}
-                name="zipCode"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <Input
-                    label="ZIP Code"
-                    placeholder="10001"
-                    keyboardType="numeric"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    error={errors.zipCode?.message}
-                  />
-                )}
-              />
-            </View>
-            <View className="flex-1">
-              <Controller
-                control={control}
-                name="country"
-                render={({ field: { onChange, onBlur, value } }) => (
-                  <Input
-                    label="Country"
-                    placeholder="United States"
-                    value={value}
-                    onChangeText={onChange}
-                    onBlur={onBlur}
-                    error={errors.country?.message}
-                  />
-                )}
-              />
-            </View>
-          </View>
-
-          <Controller
-            control={control}
-            name="phone"
-            render={({ field: { onChange, onBlur, value } }) => (
-              <Input
-                label="Phone Number"
-                placeholder="+1 (555) 000-0000"
-                keyboardType="phone-pad"
-                value={value}
-                onChangeText={onChange}
-                onBlur={onBlur}
-                error={errors.phone?.message}
-              />
-            )}
-          />
+        {/* Order Summary */}
+        <View style={styles.orderSummaryContainer}>
+          <Text style={[styles.sectionTitle, { fontSize: Math.round(20 * scale) }]}>
+            Order Summary
+          </Text>
         </View>
+        <OrderSummary
+          subtotal={subtotal}
+          vat={vat}
+          shippingFee={shippingFee}
+          total={total}
+        />
+
+        {/* Coupon Code Input */}
+        <CouponCodeInput onAdd={handleCouponAdd} />
+
+        {/* Bottom spacing for button */}
+        <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Continue Button */}
-      <View className="px-4 py-4 bg-white border-t border-gray-100">
-        <Button
-          title="Continue to Payment"
-          onPress={handleSubmit(onSubmit)}
-          fullWidth
-          size="lg"
-        />
+      {/* Place Order Button */}
+      <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 16) }]}>
+        <Pressable style={styles.placeOrderButton} onPress={handlePlaceOrder}>
+          {({ pressed }) => (
+            <View style={[styles.placeOrderButtonInner, { opacity: pressed ? 0.9 : 1 }]}>
+              <Text style={[styles.placeOrderButtonText, { fontSize: Math.round(16 * scale) }]}>
+                Place Order
+              </Text>
+            </View>
+          )}
+        </Pressable>
       </View>
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }

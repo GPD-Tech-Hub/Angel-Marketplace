@@ -10,7 +10,7 @@ export const cartScreenStyles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 10,
-    paddingVertical: 12,
+    paddingVertical: 0,
     borderBottomWidth: 0,
   },
   backButton: {
@@ -39,6 +39,9 @@ export const cartScreenStyles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 40,
     paddingTop: 100,
+  },
+  emptyIcon: {
+    marginBottom: 16,
   },
   emptyTitle: {
     fontWeight: '600',

@@ -15,8 +15,8 @@ export const cartItemCardStyles = StyleSheet.create({
     elevation: 2,
   },
   imageContainer: {
-    width: 100,
-    height: 100,
+    width: 80,
+    height: 80,
     borderRadius: 8,
     overflow: 'hidden',
     marginRight: 12,
@@ -37,12 +37,17 @@ export const cartItemCardStyles = StyleSheet.create({
   sizeText: {
     color: '#6B7280',
     fontWeight: '400',
-    marginBottom: 4,
+    marginBottom: 8,
+  },
+  priceQuantityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   priceText: {
     fontWeight: '600',
     color: '#111827',
-    marginBottom: 8,
+    flex: 1,
   },
   quantityContainer: {
     flexDirection: 'row',
@@ -50,18 +55,23 @@ export const cartItemCardStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E5E7EB',
     borderRadius: 8,
-    alignSelf: 'flex-start',
+    backgroundColor: '#FFFFFF',
   },
   quantityButton: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  quantityDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#E5E7EB',
   },
   quantityText: {
     fontWeight: '500',
     color: '#111827',
-    minWidth: 32,
+    minWidth: 36,
     textAlign: 'center',
   },
   deleteButton: {

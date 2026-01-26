@@ -4,13 +4,13 @@ export const orderSummaryStyles = StyleSheet.create({
   container: {
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 10,
   },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   label: {
     color: '#111827',
