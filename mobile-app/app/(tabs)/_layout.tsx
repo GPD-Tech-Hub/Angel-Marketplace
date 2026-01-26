@@ -59,14 +59,14 @@ export default function TabLayout() {
           name="orders"
           options={{
             title: 'Orders',
-            headerShown: true,
+            headerShown: false,
           }}
         />
         <Tabs.Screen
           name="profile"
           options={{
             title: 'Account',
-            headerShown: true,
+            headerShown: false,
           }}
         />
       </Tabs>

@@ -76,6 +76,13 @@ export function BottomNavBar() {
 
   const activeTabKey = getActiveTabKey();
 
+  // Hide bottom nav bar on orders screen
+  const segmentsArray = Array.isArray(segments) ? segments : [];
+  const screen = segmentsArray[1];
+  if (screen === 'orders') {
+    return null;
+  }
+
   return (
     <View
       style={[
