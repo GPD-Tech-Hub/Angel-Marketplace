@@ -41,8 +41,7 @@ export default function CheckoutScreen() {
   };
 
   const handleEditCard = () => {
-    // TODO: Navigate to card editing
-    console.log('Edit card');
+    router.push('/payment-method');
   };
 
   const handleCouponAdd = (code: string) => {
