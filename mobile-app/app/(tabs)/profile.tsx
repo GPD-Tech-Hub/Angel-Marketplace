@@ -34,7 +34,7 @@ export default function ProfileScreen() {
       icon: require('../../assets/icons/user-cog.png'),
       label: 'My Details',
       onPress: () => {
-        // TODO: Navigate to edit profile
+        router.push('/my-details');
       },
     },
     {

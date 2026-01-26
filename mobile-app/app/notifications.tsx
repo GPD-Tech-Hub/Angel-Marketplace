@@ -1,52 +1,45 @@
 import React, { useState } from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { notificationsStyles as styles } from '@/styles/notifications';
-import { EmptyNotifications, NotificationList, type Notification } from '@/components/notifications';
+import { notificationsSettingsStyles as styles } from '@/styles/notificationsSettings';
+
+interface NotificationSetting {
+  id: string;
+  label: string;
+  enabled: boolean;
+}
 
 export default function NotificationsScreen() {
   const router = useRouter();
-  
-  // TODO: Replace with actual notifications from API/store
-  // For now, using mock data to demonstrate the list view
-  const [notifications] = useState<Notification[]>([
-    {
-      id: '1',
-      icon: require('../assets/icons/tag.png'),
-      title: '30% Special Discount!',
-      message: 'Special promotion only valid today.',
-      date: new Date(), // Today
-    },
-    {
-      id: '2',
-      icon: require('../assets/icons/map-pin.png'),
-      title: 'New Service Available!',
-      message: 'Now you can track order in real-time.',
-      date: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
-    },
-    {
-      id: '3',
-      icon: require('../assets/icons/credit-card.png'),
-      title: 'Credit Card Connected!',
-      message: 'Credit card has been linked.',
-      date: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
-    },
-    {
-      id: '4',
-      icon: require('../assets/icons/circle-user.png'),
-      title: 'Account Setup Successfully!',
-      message: 'Your account has been created.',
-      date: new Date(Date.now() - 24 * 60 * 60 * 1000), // Yesterday
-    },
+  const { width } = useWindowDimensions();
+  const scale = Math.max(0.9, Math.min(1.0, width / 390));
+
+  // Initial notification settings state
+  const [settings, setSettings] = useState<NotificationSetting[]>([
+    { id: 'general', label: 'General Notifications', enabled: true },
+    { id: 'sound', label: 'Sound', enabled: true },
+    { id: 'vibrate', label: 'Vibrate', enabled: true },
+    { id: 'specialOffer', label: 'Special Offer', enabled: true },
+    { id: 'promoDiscounts', label: 'Promo & Discounts', enabled: true },
+    { id: 'payments', label: 'Payments', enabled: true },
+    { id: 'cashback', label: 'Cashback', enabled: true },
+    { id: 'appUpdates', label: 'App Updates', enabled: false },
+    { id: 'newService', label: 'New Service Available', enabled: true },
+    { id: 'newTips', label: 'New Tips Available', enabled: false },
   ]);
 
-  const hasNotifications = notifications.length > 0;
+  const handleToggle = (id: string) => {
+    setSettings((prevSettings) =>
+      prevSettings.map((setting) =>
+        setting.id === id ? { ...setting, enabled: !setting.enabled } : setting
+      )
+    );
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
         <Pressable
@@ -63,16 +56,36 @@ export default function NotificationsScreen() {
             />
           )}
         </Pressable>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={[styles.headerTitle, { fontSize: Math.round(20 * scale) }]}>
+          Notifications
+        </Text>
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Content */}
-      {hasNotifications ? (
-        <NotificationList notifications={notifications} />
-      ) : (
-        <EmptyNotifications />
-      )}
+      {/* Settings List */}
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {settings.map((setting, index) => (
+          <View key={setting.id}>
+            <View style={styles.settingItem}>
+              <Text style={[styles.settingLabel, { fontSize: Math.round(16 * scale) }]}>
+                {setting.label}
+              </Text>
+              <Switch
+                value={setting.enabled}
+                onValueChange={() => handleToggle(setting.id)}
+                trackColor={{ false: '#E5E7EB', true: '#F43F5E' }}
+                thumbColor="#FFFFFF"
+                ios_backgroundColor="#E5E7EB"
+              />
+            </View>
+            {index < settings.length - 1 && <View style={styles.separator} />}
+          </View>
+        ))}
+      </ScrollView>
     </SafeAreaView>
   );
 }
