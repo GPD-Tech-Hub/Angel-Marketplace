@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/authMiddleware';
 import { prisma } from '../lib/prisma';
 import { z } from 'zod';
+import { sendSuccess } from '../utils/response';
 
 const router = Router();
 
@@ -42,7 +43,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =>
       0
     );
 
-    return res.json({
+    return sendSuccess(res, {
       items: cartItems.map((item) => ({
         id: item.id,
         productId: item.productId,
@@ -120,7 +121,7 @@ router.post('/items', requireAuth, async (req: AuthenticatedRequest, res: Respon
         },
       });
 
-      return res.json({
+      return sendSuccess(res, {
         id: updated.id,
         productId: updated.productId,
         product: {
@@ -164,7 +165,7 @@ router.post('/items', requireAuth, async (req: AuthenticatedRequest, res: Respon
       },
     });
 
-    return res.status(201).json({
+    return sendSuccess(res, {
       id: cartItem.id,
       productId: cartItem.productId,
       product: {
@@ -184,7 +185,7 @@ router.post('/items', requireAuth, async (req: AuthenticatedRequest, res: Respon
       size: cartItem.size,
       color: cartItem.color,
       createdAt: cartItem.createdAt.toISOString(),
-    });
+    }, undefined, 201);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Validation error', errors: error.issues });
@@ -228,7 +229,7 @@ router.patch('/items/:id', requireAuth, async (req: AuthenticatedRequest, res: R
       },
     });
 
-    return res.json({
+    return sendSuccess(res, {
       id: updated.id,
       productId: updated.productId,
       product: {
@@ -287,17 +288,23 @@ router.delete('/items/:id', requireAuth, async (req: AuthenticatedRequest, res: 
   }
 });
 
+// DELETE /api/cart/clear - Clear entire cart (mobile app expects this path)
+router.delete('/clear', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
+    await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Clear cart error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // DELETE /api/cart - Clear entire cart
 router.delete('/', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    if (!req.user) {
-      return res.status(401).json({ message: 'Not authenticated' });
-    }
-
-    await prisma.cartItem.deleteMany({
-      where: { userId: req.user.id },
-    });
-
+    if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
+    await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });
     return res.status(204).send();
   } catch (error) {
     console.error('Clear cart error:', error);

@@ -1,8 +1,11 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/authMiddleware';
 import { prisma } from '../lib/prisma';
+import { z } from 'zod';
+import { sendSuccess } from '../utils/response';
 
 const router = Router();
+const addFavoriteBodySchema = z.object({ productId: z.string().uuid() });
 
 // GET /api/favorites
 router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -51,9 +54,38 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =>
       };
     });
 
-    return res.json({ products: productsWithRating });
+    return sendSuccess(res, { products: productsWithRating });
   } catch (error) {
     console.error('Get favorites error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// POST /api/favorites - Add to favorites (body: { productId }) - mobile app expects this
+router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
+    const body = addFavoriteBodySchema.parse(req.body);
+    const productId = body.productId;
+    const product = await prisma.product.findUnique({ where: { id: productId } });
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    const existing = await prisma.favorite.findUnique({
+      where: { userId_productId: { userId: req.user.id, productId } },
+    });
+    if (existing) return res.status(409).json({ message: 'Product already in favorites' });
+    const favorite = await prisma.favorite.create({
+      data: { userId: req.user.id, productId },
+    });
+    return sendSuccess(res, {
+      id: favorite.id,
+      productId: favorite.productId,
+      createdAt: favorite.createdAt.toISOString(),
+    }, undefined, 201);
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ message: 'Validation error', errors: error.issues });
+    }
+    console.error('Add favorite error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -94,11 +126,11 @@ router.post('/:productId', requireAuth, async (req: AuthenticatedRequest, res: R
       },
     });
 
-    return res.status(201).json({
+    return sendSuccess(res, {
       id: favorite.id,
       productId: favorite.productId,
       createdAt: favorite.createdAt.toISOString(),
-    });
+    }, undefined, 201);
   } catch (error) {
     console.error('Add favorite error:', error);
     return res.status(500).json({ message: 'Internal server error' });

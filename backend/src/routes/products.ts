@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
-import { AuthenticatedRequest, requireAuth } from '../middleware/authMiddleware';
+import { sendSuccess } from '../utils/response';
 
 const router = Router();
 
@@ -83,14 +83,13 @@ router.get('/', async (req: Request, res: Response) => {
       };
     });
 
-    return res.json({
+    // PaginatedProducts: { products, total, page, limit, totalPages }
+    return sendSuccess(res, {
       products: productsWithRating,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     });
   } catch (error) {
     console.error('Get products error:', error);
@@ -150,7 +149,7 @@ router.get('/search', async (req: Request, res: Response) => {
       };
     });
 
-    return res.json({ products: productsWithRating });
+    return sendSuccess(res, { products: productsWithRating });
   } catch (error) {
     console.error('Search products error:', error);
     return res.status(500).json({ message: 'Internal server error' });
@@ -199,7 +198,7 @@ router.get('/trending', async (req: Request, res: Response) => {
       };
     });
 
-    return res.json({ products: productsWithRating });
+    return sendSuccess(res, { products: productsWithRating });
   } catch (error) {
     console.error('Get trending products error:', error);
     return res.status(500).json({ message: 'Internal server error' });
@@ -258,7 +257,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
         ? product.reviews.reduce((sum, r) => sum + r.rating, 0) / product.reviews.length
         : 0;
 
-    return res.json({
+    return sendSuccess(res, {
       id: product.id,
       name: product.name,
       slug: product.slug,
@@ -307,7 +306,7 @@ router.get('/categories/all', async (req: Request, res: Response) => {
       },
     });
 
-    return res.json({
+    return sendSuccess(res, {
       categories: categories.map((c) => ({
         id: c.id,
         name: c.name,

@@ -4,6 +4,7 @@ import { signAccessToken, signRefreshToken } from '../utils/jwt';
 import { prisma } from '../lib/prisma';
 import { z } from 'zod';
 import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiter';
+import { sendSuccess } from '../utils/response';
 
 const router = Router();
 
@@ -57,7 +58,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
       data: { userId: user.id },
     });
 
-    return res.status(201).json({
+    return sendSuccess(res, {
       user: {
         id: user.id,
         email: user.email,
@@ -67,11 +68,8 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
       },
-      tokens: {
-        accessToken,
-        refreshToken,
-      },
-    });
+      tokens: { accessToken, refreshToken },
+    }, undefined, 201);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Validation error', errors: error.issues });
@@ -105,7 +103,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
     const accessToken = signAccessToken({ sub: user.id, email: user.email });
     const refreshToken = signRefreshToken({ sub: user.id, email: user.email });
 
-    return res.json({
+    return sendSuccess(res, {
       user: {
         id: user.id,
         email: user.email,
@@ -115,10 +113,7 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
         createdAt: user.createdAt.toISOString(),
         updatedAt: user.updatedAt.toISOString(),
       },
-      tokens: {
-        accessToken,
-        refreshToken,
-      },
+      tokens: { accessToken, refreshToken },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -151,7 +146,8 @@ router.post('/refresh', async (req: Request, res: Response) => {
     const accessToken = signAccessToken({ sub: payload.sub, email: payload.email });
     const newRefreshToken = signRefreshToken({ sub: payload.sub, email: payload.email });
 
-    return res.json({
+    // Shape: { success, data: { accessToken, refreshToken } } — mobile expects response.data.data.accessToken / .refreshToken
+    return sendSuccess(res, {
       accessToken,
       refreshToken: newRefreshToken,
     });
@@ -165,9 +161,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
 });
 
 router.post('/logout', async (req: Request, res: Response) => {
-  // In a stateless JWT system, logout is handled client-side by removing tokens
-  // For enhanced security, you could implement a token blacklist here
-  return res.json({ message: 'Logged out successfully' });
+  return sendSuccess(res, { message: 'Logged out successfully' });
 });
 
 const forgotPasswordSchema = z.object({
@@ -186,14 +180,8 @@ router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: 
     });
 
     // Always return success to prevent email enumeration
-    if (!user) {
-      return res.json({ message: 'If an account exists, a password reset link has been sent' });
-    }
-
-    // In production, generate reset token and send email
-    // For now, just return success
-    // TODO: Implement email service with reset token
-    return res.json({ message: 'If an account exists, a password reset link has been sent' });
+    const message = 'If an account exists, a password reset link has been sent';
+    return sendSuccess(res, { message });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Validation error', errors: error.issues });

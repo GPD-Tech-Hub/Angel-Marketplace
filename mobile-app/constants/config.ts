@@ -1,7 +1,7 @@
 // Environment-based configuration
 const ENV = {
   development: {
-    API_URL: 'http://localhost:3000/api',
+    API_URL: 'http://localhost:4000/api',
     STRIPE_PUBLISHABLE_KEY: 'pk_test_your_stripe_key',
     PAYSTACK_PUBLIC_KEY: 'pk_test_your_paystack_key',
     FLUTTERWAVE_PUBLIC_KEY: 'FLWPUBK_TEST-your_flutterwave_key',

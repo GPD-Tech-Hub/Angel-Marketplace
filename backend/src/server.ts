@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import apiRouter from './routes';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
+import { setupSwagger } from './config/swagger';
 
 const app = express();
 
@@ -66,6 +67,9 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // API routes
 app.use('/api', apiRouter);
+
+// Swagger API docs (no rate limit)
+setupSwagger(app, '/api-docs');
 
 // 404 handler
 app.use((req: Request, res: Response) => {

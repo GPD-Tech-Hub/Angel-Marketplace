@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/authMiddleware';
 import { prisma } from '../lib/prisma';
 import { z } from 'zod';
+import { sendSuccess } from '../utils/response';
 
 const router = Router();
 
@@ -31,7 +32,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =>
       take: 50,
     });
 
-    return res.json({
+    return sendSuccess(res, {
       notifications: notifications.map((n) => ({
         ...n,
         createdAt: n.createdAt.toISOString(),
@@ -63,7 +64,7 @@ router.patch('/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Re
       data: { read: true },
     });
 
-    return res.json({
+    return sendSuccess(res, {
       ...updated,
       createdAt: updated.createdAt.toISOString(),
     });
@@ -91,7 +92,7 @@ router.get('/settings', requireAuth, async (req: AuthenticatedRequest, res: Resp
       });
     }
 
-    return res.json({
+    return sendSuccess(res, {
       general: settings.general,
       sound: settings.sound,
       vibrate: settings.vibrate,
@@ -134,7 +135,7 @@ router.patch('/settings', requireAuth, async (req: AuthenticatedRequest, res: Re
       });
     }
 
-    return res.json({
+    return sendSuccess(res, {
       general: settings.general,
       sound: settings.sound,
       vibrate: settings.vibrate,

@@ -14,6 +14,8 @@ const router = Router();
 
 router.use('/auth', authRouter);
 router.use('/users', usersRouter);
+// Mobile app expects /users/addresses - mount addresses under users as well
+router.use('/users/addresses', addressesRouter);
 router.use('/products', productsRouter);
 router.use('/categories', categoriesRouter);
 router.use('/cart', cartRouter);

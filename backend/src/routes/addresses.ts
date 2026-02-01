@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/authMiddleware';
 import { prisma } from '../lib/prisma';
 import { z } from 'zod';
+import { sendSuccess } from '../utils/response';
 
 const router = Router();
 
@@ -22,7 +23,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =>
   try {
     if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
     const addresses = await prisma.address.findMany({ where: { userId: req.user.id }, orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }] });
-    return res.json({ addresses: addresses.map((a) => ({ ...a, createdAt: a.createdAt.toISOString(), updatedAt: a.updatedAt.toISOString() })) });
+    return sendSuccess(res, { addresses: addresses.map((a) => ({ ...a, createdAt: a.createdAt.toISOString(), updatedAt: a.updatedAt.toISOString() })) });
   } catch (error) {
     console.error('Get addresses error:', error);
     return res.status(500).json({ message: 'Internal server error' });
@@ -51,7 +52,7 @@ router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res: Respons
     if (!address) return res.status(404).json({ message: 'Address not found' });
     if (body.isDefault) await prisma.address.updateMany({ where: { userId: req.user.id, isDefault: true, id: { not: req.params.id } }, data: { isDefault: false } });
     const updated = await prisma.address.update({ where: { id: req.params.id }, data: body });
-    return res.json({ ...updated, createdAt: updated.createdAt.toISOString(), updatedAt: updated.updatedAt.toISOString() });
+    return sendSuccess(res, { ...updated, createdAt: updated.createdAt.toISOString(), updatedAt: updated.updatedAt.toISOString() });
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.issues });
     console.error('Update address error:', error);

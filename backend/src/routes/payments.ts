@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/authMiddleware';
 import { prisma } from '../lib/prisma';
 import { z } from 'zod';
+import { sendSuccess } from '../utils/response';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =>
   try {
     if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
     const paymentMethods = await prisma.paymentMethod.findMany({ where: { userId: req.user.id }, orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }] });
-    return res.json({ paymentMethods: paymentMethods.map((pm) => ({ ...pm, createdAt: pm.createdAt.toISOString(), updatedAt: pm.updatedAt.toISOString() })) });
+    return sendSuccess(res, { paymentMethods: paymentMethods.map((pm) => ({ ...pm, createdAt: pm.createdAt.toISOString(), updatedAt: pm.updatedAt.toISOString() })) });
   } catch (error) {
     console.error('Get payment methods error:', error);
     return res.status(500).json({ message: 'Internal server error' });
@@ -51,7 +52,7 @@ router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res: Respons
     if (!paymentMethod) return res.status(404).json({ message: 'Payment method not found' });
     if (body.isDefault) await prisma.paymentMethod.updateMany({ where: { userId: req.user.id, isDefault: true, id: { not: req.params.id } }, data: { isDefault: false } });
     const updated = await prisma.paymentMethod.update({ where: { id: req.params.id }, data: body });
-    return res.json({ ...updated, createdAt: updated.createdAt.toISOString(), updatedAt: updated.updatedAt.toISOString() });
+    return sendSuccess(res, { ...updated, createdAt: updated.createdAt.toISOString(), updatedAt: updated.updatedAt.toISOString() });
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.issues });
     console.error('Update payment method error:', error);
@@ -98,7 +99,7 @@ router.post('/create-intent', requireAuth, async (req: AuthenticatedRequest, res
       status: 'requires_payment_method',
     };
 
-    return res.status(201).json(paymentIntent);
+    return sendSuccess(res, paymentIntent, undefined, 201);
   } catch (error) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: 'Validation error', errors: error.issues });
@@ -123,7 +124,7 @@ router.post('/confirm', requireAuth, async (req: AuthenticatedRequest, res: Resp
     // In production, verify payment with payment gateway
     // TODO: Implement actual payment confirmation
     
-    return res.json({
+    return sendSuccess(res, {
       success: true,
       paymentIntentId: body.paymentIntentId,
       status: 'succeeded',
@@ -158,7 +159,7 @@ router.post('/webhook', async (req: Request, res: Response) => {
         console.log(`Unhandled event type: ${event.type}`);
     }
 
-    return res.json({ received: true });
+    return sendSuccess(res, { received: true });
   } catch (error) {
     console.error('Webhook error:', error);
     return res.status(500).json({ message: 'Internal server error' });

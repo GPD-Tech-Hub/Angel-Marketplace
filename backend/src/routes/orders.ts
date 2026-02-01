@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/authMiddleware';
 import { prisma } from '../lib/prisma';
 import { z } from 'zod';
+import { sendSuccess } from '../utils/response';
 
 const router = Router();
 
@@ -16,19 +17,58 @@ const createReviewSchema = z.object({
   comment: z.string().optional(),
 });
 
-// GET /api/orders
+// GET /api/orders — PaginatedResponse<Order>: { data: Order[], total, page, limit, totalPages }
 router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const skip = (page - 1) * limit;
     const status = req.query.status as string | undefined;
     const where: any = { userId: req.user.id };
     if (status) where.status = status;
-    const orders = await prisma.order.findMany({
-      where,
-      include: { address: true, paymentMethod: true, items: { include: { product: { include: { category: { select: { id: true, name: true, slug: true } } } } } }, reviews: { select: { id: true, rating: true } } },
-      orderBy: { createdAt: 'desc' },
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        include: { address: true, paymentMethod: true, items: { include: { product: { include: { category: { select: { id: true, name: true, slug: true } } } } } }, reviews: { select: { id: true, rating: true } } },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.order.count({ where }),
+    ]);
+
+    const data = orders.map((o) => ({
+      ...o,
+      items: o.items.map((i) => ({
+        ...i,
+        product: {
+          ...i.product,
+          createdAt: i.product.createdAt.toISOString(),
+          updatedAt: i.product.updatedAt.toISOString(),
+        },
+        createdAt: i.createdAt.toISOString(),
+      })),
+      address: {
+        ...o.address,
+        createdAt: o.address.createdAt.toISOString(),
+        updatedAt: o.address.updatedAt.toISOString(),
+      },
+      paymentMethod: o.paymentMethod
+        ? { ...o.paymentMethod, createdAt: o.paymentMethod.createdAt.toISOString(), updatedAt: o.paymentMethod.updatedAt.toISOString() }
+        : null,
+      createdAt: o.createdAt.toISOString(),
+      updatedAt: o.updatedAt.toISOString(),
+    }));
+
+    return sendSuccess(res, {
+      data: data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     });
-    return res.json({ orders: orders.map((o) => ({ ...o, items: o.items.map((i) => ({ ...i, product: { ...i.product, createdAt: i.product.createdAt.toISOString(), updatedAt: i.product.updatedAt.toISOString() }, createdAt: i.createdAt.toISOString() })), address: { ...o.address, createdAt: o.address.createdAt.toISOString(), updatedAt: o.address.updatedAt.toISOString() }, paymentMethod: o.paymentMethod ? { ...o.paymentMethod, createdAt: o.paymentMethod.createdAt.toISOString(), updatedAt: o.paymentMethod.updatedAt.toISOString() } : null, createdAt: o.createdAt.toISOString(), updatedAt: o.updatedAt.toISOString() })) });
   } catch (error) {
     console.error('Get orders error:', error);
     return res.status(500).json({ message: 'Internal server error' });
@@ -41,7 +81,7 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response)
     if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
     const order = await prisma.order.findFirst({ where: { id: req.params.id, userId: req.user.id }, include: { address: true, paymentMethod: true, items: { include: { product: { include: { category: { select: { id: true, name: true, slug: true } } } } } }, reviews: { include: { user: { select: { id: true, firstName: true, lastName: true } } } } } });
     if (!order) return res.status(404).json({ message: 'Order not found' });
-    return res.json({ ...order, items: order.items.map((i) => ({ ...i, product: { ...i.product, createdAt: i.product.createdAt.toISOString(), updatedAt: i.product.updatedAt.toISOString() }, createdAt: i.createdAt.toISOString() })), address: { ...order.address, createdAt: order.address.createdAt.toISOString(), updatedAt: order.address.updatedAt.toISOString() }, paymentMethod: order.paymentMethod ? { ...order.paymentMethod, createdAt: order.paymentMethod.createdAt.toISOString(), updatedAt: order.paymentMethod.updatedAt.toISOString() } : null, reviews: order.reviews.map((r) => ({ ...r, createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString() })), createdAt: order.createdAt.toISOString(), updatedAt: order.updatedAt.toISOString() });
+    return sendSuccess(res, { ...order, items: order.items.map((i) => ({ ...i, product: { ...i.product, createdAt: i.product.createdAt.toISOString(), updatedAt: i.product.updatedAt.toISOString() }, createdAt: i.createdAt.toISOString() })), address: { ...order.address, createdAt: order.address.createdAt.toISOString(), updatedAt: order.address.updatedAt.toISOString() }, paymentMethod: order.paymentMethod ? { ...order.paymentMethod, createdAt: order.paymentMethod.createdAt.toISOString(), updatedAt: order.paymentMethod.updatedAt.toISOString() } : null, reviews: order.reviews.map((r) => ({ ...r, createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString() })), createdAt: order.createdAt.toISOString(), updatedAt: order.updatedAt.toISOString() });
   } catch (error) {
     console.error('Get order error:', error);
     return res.status(500).json({ message: 'Internal server error' });
@@ -90,7 +130,7 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
     await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });
     if (body.couponCode) await prisma.coupon.update({ where: { code: body.couponCode }, data: { usedCount: { increment: 1 } } });
     await prisma.notification.create({ data: { userId: req.user.id, title: 'Order Placed', message: `Your order #${order.id.slice(0, 8)} has been placed successfully.`, type: 'order' } });
-    return res.status(201).json({ ...order, items: order.items.map((i) => ({ ...i, product: { ...i.product, createdAt: i.product.createdAt.toISOString(), updatedAt: i.product.updatedAt.toISOString() }, createdAt: i.createdAt.toISOString() })), address: { ...order.address, createdAt: order.address.createdAt.toISOString(), updatedAt: order.address.updatedAt.toISOString() }, paymentMethod: order.paymentMethod ? { ...order.paymentMethod, createdAt: order.paymentMethod.createdAt.toISOString(), updatedAt: order.paymentMethod.updatedAt.toISOString() } : null, createdAt: order.createdAt.toISOString(), updatedAt: order.updatedAt.toISOString() });
+    return sendSuccess(res, { ...order, items: order.items.map((i) => ({ ...i, product: { ...i.product, createdAt: i.product.createdAt.toISOString(), updatedAt: i.product.updatedAt.toISOString() }, createdAt: i.createdAt.toISOString() })), address: { ...order.address, createdAt: order.address.createdAt.toISOString(), updatedAt: order.address.updatedAt.toISOString() }, paymentMethod: order.paymentMethod ? { ...order.paymentMethod, createdAt: order.paymentMethod.createdAt.toISOString(), updatedAt: order.paymentMethod.updatedAt.toISOString() } : null, createdAt: order.createdAt.toISOString(), updatedAt: order.updatedAt.toISOString() }, undefined, 201);
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.issues });
     console.error('Create order error:', error);
@@ -148,7 +188,7 @@ router.post('/:id/cancel', requireAuth, async (req: AuthenticatedRequest, res: R
       },
     });
 
-    return res.json({
+    return sendSuccess(res, {
       ...updated,
       items: updated.items.map((i) => ({
         ...i,
@@ -195,7 +235,7 @@ router.post('/:id/review', requireAuth, async (req: AuthenticatedRequest, res: R
       data: { userId: req.user.id, productId: orderItem.productId, orderId: order.id, rating: body.rating, comment: body.comment },
       include: { user: { select: { id: true, firstName: true, lastName: true } } },
     });
-    return res.status(201).json({ ...review, createdAt: review.createdAt.toISOString(), updatedAt: review.updatedAt.toISOString() });
+    return sendSuccess(res, { ...review, createdAt: review.createdAt.toISOString(), updatedAt: review.updatedAt.toISOString() }, undefined, 201);
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.issues });
     console.error('Create review error:', error);

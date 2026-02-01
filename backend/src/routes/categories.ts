@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
+import { sendSuccess } from '../utils/response';
 
 const router = Router();
 
@@ -22,18 +23,16 @@ router.get('/', async (req: Request, res: Response) => {
       },
     });
 
-    return res.json({
-      categories: categories.map((c) => ({
-        id: c.id,
-        name: c.name,
-        slug: c.slug,
-        description: c.description,
-        image: c.image,
-        productCount: c._count.products,
-        createdAt: c.createdAt.toISOString(),
-        updatedAt: c.updatedAt.toISOString(),
-      })),
-    });
+    return sendSuccess(res, categories.map((c) => ({
+      id: c.id,
+      name: c.name,
+      slug: c.slug,
+      description: c.description,
+      image: c.image,
+      productCount: c._count.products,
+      createdAt: c.createdAt.toISOString(),
+      updatedAt: c.updatedAt.toISOString(),
+    })));
   } catch (error) {
     console.error('Get categories error:', error);
     return res.status(500).json({ message: 'Internal server error' });
@@ -63,7 +62,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Category not found' });
     }
 
-    return res.json({
+    return sendSuccess(res, {
       id: category.id,
       name: category.name,
       slug: category.slug,
@@ -137,14 +136,13 @@ router.get('/:slug/products', async (req: Request, res: Response) => {
       };
     });
 
-    return res.json({
+    // PaginatedProducts: { products, total, page, limit, totalPages }
+    return sendSuccess(res, {
       products: productsWithRating,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     });
   } catch (error) {
     console.error('Get category products error:', error);
