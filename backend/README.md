@@ -81,6 +81,10 @@ backend/
 ### Authentication
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
+- `POST /api/auth/logout` - Logout user
+- `POST /api/auth/refresh` - Refresh access token
+- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/reset-password` - Reset password with token
 
 ### Users
 - `GET /api/users/me` - Get current user profile
@@ -88,21 +92,28 @@ backend/
 
 ### Products
 - `GET /api/products` - List products (with pagination, search, filters)
+- `GET /api/products/search` - Search products
 - `GET /api/products/trending` - Get trending products
-- `GET /api/products/:id` - Get product details
-- `GET /api/products/categories/all` - Get all categories
+- `GET /api/products/:slug` - Get product by slug (or ID for backward compatibility)
+- `GET /api/products/categories/all` - Get all categories (legacy endpoint)
+
+### Categories
+- `GET /api/categories` - List all categories with product counts
+- `GET /api/categories/:slug` - Get category by slug
+- `GET /api/categories/:slug/products` - Get products by category
 
 ### Cart
 - `GET /api/cart` - Get user's cart
-- `POST /api/cart` - Add item to cart
-- `PATCH /api/cart/:id` - Update cart item quantity
-- `DELETE /api/cart/:id` - Remove item from cart
+- `POST /api/cart/items` - Add item to cart
+- `PATCH /api/cart/items/:id` - Update cart item quantity
+- `DELETE /api/cart/items/:id` - Remove item from cart
 - `DELETE /api/cart` - Clear entire cart
 
 ### Orders
 - `GET /api/orders` - List user orders (optional ?status filter)
 - `GET /api/orders/:id` - Get order details
 - `POST /api/orders` - Create order from cart
+- `POST /api/orders/:id/cancel` - Cancel order
 - `POST /api/orders/:id/review` - Create review for delivered order
 
 ### Addresses
@@ -116,6 +127,9 @@ backend/
 - `POST /api/payments` - Add payment method
 - `PATCH /api/payments/:id` - Update payment method
 - `DELETE /api/payments/:id` - Delete payment method
+- `POST /api/payments/create-intent` - Create payment intent
+- `POST /api/payments/confirm` - Confirm payment
+- `POST /api/payments/webhook` - Payment webhook handler
 
 ### Favorites
 - `GET /api/favorites` - List favorite products
@@ -178,6 +192,25 @@ docker-compose down
 docker-compose logs -f postgres
 ```
 
+## 🔒 Security Features
+
+- **Rate Limiting**: 
+  - General API: 100 requests per 15 minutes
+  - Authentication: 5 requests per 15 minutes
+  - Password Reset: 3 requests per hour
+- **Security Headers**: Helmet middleware for XSS, CSRF, and other protections
+- **Input Validation**: Zod schema validation on all endpoints
+- **CORS**: Configurable allowed origins
+- **Request Size Limits**: 10MB maximum
+- **Error Handling**: Centralized error handling with no sensitive data leakage
+
+## ⚡ Performance Optimizations
+
+- **Database Indexes**: Optimized indexes on frequently queried fields
+- **Response Compression**: Gzip compression for all responses
+- **Query Optimization**: Selective field queries and parallel execution
+- **Connection Pooling**: Optimized Prisma client configuration
+
 ## 📝 Notes
 
 - All timestamps are returned as ISO strings
@@ -185,3 +218,4 @@ docker-compose logs -f postgres
 - Passwords are hashed with bcrypt (10 rounds)
 - JWT tokens expire: Access (15m), Refresh (7d)
 - Default notification settings are created on user registration
+- See `IMPROVEMENTS.md` for detailed list of all enhancements

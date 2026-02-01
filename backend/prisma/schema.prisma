@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
@@ -32,6 +33,8 @@ model User {
   reviews        Review[]
   notificationSettings NotificationSettings?
 
+  @@index([email])
+  @@index([createdAt])
   @@map("users")
 }
 
@@ -46,6 +49,8 @@ model Category {
 
   products    Product[]
 
+  @@index([slug])
+  @@index([createdAt])
   @@map("categories")
 }
 
@@ -68,6 +73,11 @@ model Product {
   favorites   Favorite[]
   reviews     Review[]
 
+  @@index([categoryId])
+  @@index([slug])
+  @@index([price])
+  @@index([createdAt])
+  @@index([name])
   @@map("products")
 }
 
@@ -90,6 +100,8 @@ model Address {
 
   orders    Order[]
 
+  @@index([userId])
+  @@index([isDefault])
   @@map("addresses")
 }
 
@@ -109,6 +121,8 @@ model PaymentMethod {
 
   orders      Order[]
 
+  @@index([userId])
+  @@index([isDefault])
   @@map("payment_methods")
 }
 
@@ -126,6 +140,8 @@ model CartItem {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, productId, size, color])
+  @@index([userId])
+  @@index([productId])
   @@map("cart_items")
 }
 
@@ -150,6 +166,10 @@ model Order {
   items         OrderItem[]
   reviews       Review[]
 
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId, status])
   @@map("orders")
 }
 
@@ -165,6 +185,8 @@ model OrderItem {
   color     String?
   createdAt DateTime @default(now())
 
+  @@index([orderId])
+  @@index([productId])
   @@map("order_items")
 }
 
@@ -177,6 +199,8 @@ model Favorite {
   createdAt DateTime @default(now())
 
   @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
   @@map("favorites")
 }
 
@@ -194,6 +218,10 @@ model Review {
   updatedAt DateTime @updatedAt
 
   @@unique([userId, orderId])
+  @@index([userId])
+  @@index([productId])
+  @@index([rating])
+  @@index([createdAt])
   @@map("reviews")
 }
 
@@ -207,6 +235,10 @@ model Notification {
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 
+  @@index([userId])
+  @@index([read])
+  @@index([userId, read])
+  @@index([createdAt])
   @@map("notifications")
 }
 
@@ -245,5 +277,8 @@ model Coupon {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@index([code])
+  @@index([isActive])
+  @@index([validUntil])
   @@map("coupons")
 }

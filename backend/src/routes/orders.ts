@@ -98,6 +98,88 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
   }
 });
 
+// POST /api/orders/:id/cancel
+router.post('/:id/cancel', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
+    
+    const order = await prisma.order.findFirst({
+      where: { id: req.params.id, userId: req.user.id },
+    });
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Only allow cancellation of pending or processing orders
+    if (order.status !== 'pending' && order.status !== 'processing') {
+      return res.status(400).json({
+        message: `Cannot cancel order with status: ${order.status}. Only pending or processing orders can be cancelled.`,
+      });
+    }
+
+    const updated = await prisma.order.update({
+      where: { id: order.id },
+      data: { status: 'cancelled' },
+      include: {
+        address: true,
+        paymentMethod: true,
+        items: {
+          include: {
+            product: {
+              include: {
+                category: {
+                  select: { id: true, name: true, slug: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    // Create notification
+    await prisma.notification.create({
+      data: {
+        userId: req.user.id,
+        title: 'Order Cancelled',
+        message: `Your order #${order.id.slice(0, 8)} has been cancelled.`,
+        type: 'order',
+      },
+    });
+
+    return res.json({
+      ...updated,
+      items: updated.items.map((i) => ({
+        ...i,
+        product: {
+          ...i.product,
+          createdAt: i.product.createdAt.toISOString(),
+          updatedAt: i.product.updatedAt.toISOString(),
+        },
+        createdAt: i.createdAt.toISOString(),
+      })),
+      address: {
+        ...updated.address,
+        createdAt: updated.address.createdAt.toISOString(),
+        updatedAt: updated.address.updatedAt.toISOString(),
+      },
+      paymentMethod: updated.paymentMethod
+        ? {
+            ...updated.paymentMethod,
+            createdAt: updated.paymentMethod.createdAt.toISOString(),
+            updatedAt: updated.paymentMethod.updatedAt.toISOString(),
+          }
+        : null,
+      createdAt: updated.createdAt.toISOString(),
+      updatedAt: updated.updatedAt.toISOString(),
+    });
+  } catch (error) {
+    console.error('Cancel order error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
 // POST /api/orders/:id/review
 router.post('/:id/review', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {

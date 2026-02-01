@@ -19,5 +19,7 @@ Thumbs.db
 prisma/dev.db
 prisma/dev.db-journal
 
+# Prisma 7 generated client
+src/generated/
 
-/src/generated/prisma
+

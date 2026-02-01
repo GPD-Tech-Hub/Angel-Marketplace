@@ -73,8 +73,8 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =>
   }
 });
 
-// POST /api/cart
-router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+// POST /api/cart/items - Add item to cart
+router.post('/items', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -194,8 +194,8 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
   }
 });
 
-// PATCH /api/cart/:id
-router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+// PATCH /api/cart/items/:id - Update cart item
+router.patch('/items/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
@@ -258,8 +258,8 @@ router.patch('/:id', requireAuth, async (req: AuthenticatedRequest, res: Respons
   }
 });
 
-// DELETE /api/cart/:id
-router.delete('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+// DELETE /api/cart/items/:id - Remove cart item
+router.delete('/items/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
