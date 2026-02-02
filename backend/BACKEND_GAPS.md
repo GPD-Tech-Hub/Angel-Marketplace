@@ -58,13 +58,13 @@ Uses `sendSuccess(res, { accessToken, refreshToken })` → `{ success: true, dat
 
 ---
 
-## 5. Cart response shape
+## 5. Cart response shape ✅ Fixed
 
 **Mobile:**  
 `Cart` = `{ id, userId, items, subtotal, itemCount, createdAt, updatedAt }`.
 
 **Backend:**  
-Returns `{ items, subtotal, itemCount }` (no `id`, `userId`, `createdAt`, `updatedAt`).
+GET `/cart` now returns `sendSuccess(res, { id, userId, items, subtotal, itemCount, createdAt, updatedAt })`. `id`/`userId` = authenticated user id; `createdAt`/`updatedAt` = earliest/latest cart item timestamps (or now if empty). Wrapped in `{ success, data }`.
 
 **Needed:**  
 - Either add a logical cart `id` and `userId` and timestamps to the response, or document that the app uses a “virtual” cart and update mobile types to match backend (no `id`/`userId`/timestamps).  

@@ -242,12 +242,17 @@ const options: swaggerJsdoc.Options = {
         },
         CartDto: {
           type: 'object',
-          description: 'GET /cart response data',
+          description: 'GET /cart response data; matches mobile Cart type',
           properties: {
+            id: { type: 'string', description: 'Cart id (same as userId for per-user cart)' },
+            userId: { type: 'string' },
             items: { type: 'array', items: { $ref: '#/components/schemas/CartItemDto' } },
             subtotal: { type: 'number' },
             itemCount: { type: 'integer' },
+            createdAt: { type: 'string', format: 'date-time', description: 'Earliest cart item createdAt (or now if empty)' },
+            updatedAt: { type: 'string', format: 'date-time', description: 'Latest cart item updatedAt (or now if empty)' },
           },
+          required: ['id', 'userId', 'items', 'subtotal', 'itemCount', 'createdAt', 'updatedAt'],
         },
         AddToCartDto: {
           type: 'object',

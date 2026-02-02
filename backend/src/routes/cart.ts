@@ -42,8 +42,16 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =>
       (sum, item) => sum + item.price * item.quantity,
       0
     );
+    const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    // Cart shape for mobile: Cart = { id, userId, items, subtotal, itemCount, createdAt, updatedAt }
+    const itemDates = cartItems.flatMap((i) => [i.createdAt.getTime(), i.updatedAt.getTime()]);
+    const minTs = itemDates.length ? Math.min(...itemDates) : Date.now();
+    const maxTs = itemDates.length ? Math.max(...itemDates) : Date.now();
 
     return sendSuccess(res, {
+      id: req.user.id,
+      userId: req.user.id,
       items: cartItems.map((item) => ({
         id: item.id,
         productId: item.productId,
@@ -66,7 +74,9 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =>
         createdAt: item.createdAt.toISOString(),
       })),
       subtotal,
-      itemCount: cartItems.reduce((sum, item) => sum + item.quantity, 0),
+      itemCount,
+      createdAt: new Date(minTs).toISOString(),
+      updatedAt: new Date(maxTs).toISOString(),
     });
   } catch (error) {
     console.error('Get cart error:', error);
