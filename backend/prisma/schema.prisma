@@ -146,22 +146,23 @@ model CartItem {
 }
 
 model Order {
-  id            String        @id @default(uuid())
-  userId        String
-  user          User          @relation(fields: [userId], references: [id])
-  addressId     String
-  address       Address        @relation(fields: [addressId], references: [id])
-  paymentMethodId String?
-  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
-  status        String        @default("pending") // pending, processing, shipped, delivered, cancelled
-  subtotal      Float
-  vat           Float         @default(0)
-  shippingFee   Float         @default(0)
-  total         Float
-  couponCode    String?
-  trackingNumber String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id               String         @id @default(uuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id])
+  addressId        String
+  address          Address        @relation(fields: [addressId], references: [id])
+  paymentMethodId  String?
+  paymentMethod    PaymentMethod? @relation(fields: [paymentMethodId], references: [id])
+  paymentProvider  String?        // 'stripe' | 'paystack' | 'flutterwave' when created from mobile payload
+  status           String         @default("pending") // pending, processing, shipped, delivered, cancelled
+  subtotal         Float
+  vat              Float          @default(0)
+  shippingFee      Float          @default(0)
+  total            Float
+  couponCode       String?
+  trackingNumber   String?
+  createdAt        DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 
   items         OrderItem[]
   reviews       Review[]

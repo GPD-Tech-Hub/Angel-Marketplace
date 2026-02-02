@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import morgan from 'morgan';
 import apiRouter from './routes';
+import { stripeWebhookHandler } from './routes/stripeWebhook';
 import { errorHandler } from './middleware/errorHandler';
 import { apiLimiter } from './middleware/rateLimiter';
 import { setupSwagger } from './config/swagger';
@@ -48,6 +49,13 @@ if (process.env.NODE_ENV === 'development') {
 } else {
   app.use(morgan('combined'));
 }
+
+// Stripe webhook must use raw body for signature verification (register before express.json)
+app.post(
+  '/api/payments/webhook',
+  express.raw({ type: 'application/json' }),
+  (req: Request, res: Response) => stripeWebhookHandler(req, res)
+);
 
 // Body parsing with size limits
 app.use(express.json({ limit: '10mb' }));

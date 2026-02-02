@@ -6,16 +6,105 @@ import { sendSuccess } from '../utils/response';
 
 const router = Router();
 
-const createOrderSchema = z.object({
+const shippingAddressSchema = z.object({
+  firstName: z.string().min(2),
+  lastName: z.string().min(2),
+  address: z.string().min(5),
+  apartment: z.string().optional(),
+  city: z.string().min(2),
+  state: z.string().min(2),
+  zipCode: z.string().min(4),
+  country: z.string().min(2),
+  phone: z.string().min(10),
+});
+
+const createOrderSchemaLegacy = z.object({
   addressId: z.string().uuid(),
   paymentMethodId: z.string().uuid().optional(),
   couponCode: z.string().optional(),
 });
 
+const createOrderSchemaMobile = z.object({
+  shippingAddress: shippingAddressSchema,
+  paymentMethod: z.enum(['stripe', 'paystack', 'flutterwave']),
+  couponCode: z.string().optional(),
+});
+
+const createOrderSchema = z.union([createOrderSchemaLegacy, createOrderSchemaMobile]);
+
 const createReviewSchema = z.object({
   rating: z.number().int().min(1).max(5),
   comment: z.string().optional(),
 });
+
+type OrderWithRelations = Awaited<ReturnType<typeof prisma.order.findFirst>> & {
+  address: { firstName: string; lastName: string; address: string; apartment: string | null; city: string; state: string; zipCode: string; country: string; phone: string };
+  paymentMethod: { type: string } | null;
+  items: Array<{
+    id: string;
+    productId: string;
+    quantity: number;
+    price: number;
+    product: { id: string; name: string; slug: string; description: string | null; price: number; images: string[]; stock: number; categoryId: string; createdAt: Date; updatedAt: Date; category?: { id: string; name: string; slug: string } };
+    createdAt: Date;
+  }>;
+  paymentProvider?: string | null;
+  status: string;
+  subtotal: number;
+  shippingFee: number;
+  total: number;
+  trackingNumber: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  userId: string;
+};
+
+function toMapOrderToMobileShape(order: OrderWithRelations) {
+  const statusUpper = order.status.toUpperCase() as 'PENDING' | 'PROCESSING' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+  return {
+    id: order.id,
+    orderNumber: `#${order.id.slice(-8).toUpperCase()}`,
+    userId: order.userId,
+    items: order.items.map((i) => ({
+      id: i.id,
+      productId: i.productId,
+      product: {
+        id: i.product.id,
+        name: i.product.name,
+        slug: i.product.slug,
+        description: i.product.description,
+        price: i.product.price,
+        images: i.product.images,
+        stock: i.product.stock,
+        categoryId: i.product.categoryId,
+        category: i.product.category,
+        createdAt: i.product.createdAt.toISOString(),
+        updatedAt: i.product.updatedAt.toISOString(),
+      },
+      quantity: i.quantity,
+      price: i.price,
+    })),
+    status: statusUpper,
+    subtotal: order.subtotal,
+    shipping: order.shippingFee,
+    total: order.total,
+    shippingAddress: {
+      firstName: order.address.firstName,
+      lastName: order.address.lastName,
+      address: order.address.address,
+      apartment: order.address.apartment ?? undefined,
+      city: order.address.city,
+      state: order.address.state,
+      zipCode: order.address.zipCode,
+      country: order.address.country,
+      phone: order.address.phone,
+    },
+    paymentMethod: order.paymentProvider ?? order.paymentMethod?.type ?? 'stripe',
+    trackingNumber: order.trackingNumber ?? undefined,
+    createdAt: order.createdAt.toISOString(),
+    updatedAt: order.updatedAt.toISOString(),
+  };
+}
 
 // GET /api/orders — PaginatedResponse<Order>: { data: Order[], total, page, limit, totalPages }
 router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -39,31 +128,10 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =>
       prisma.order.count({ where }),
     ]);
 
-    const data = orders.map((o) => ({
-      ...o,
-      items: o.items.map((i) => ({
-        ...i,
-        product: {
-          ...i.product,
-          createdAt: i.product.createdAt.toISOString(),
-          updatedAt: i.product.updatedAt.toISOString(),
-        },
-        createdAt: i.createdAt.toISOString(),
-      })),
-      address: {
-        ...o.address,
-        createdAt: o.address.createdAt.toISOString(),
-        updatedAt: o.address.updatedAt.toISOString(),
-      },
-      paymentMethod: o.paymentMethod
-        ? { ...o.paymentMethod, createdAt: o.paymentMethod.createdAt.toISOString(), updatedAt: o.paymentMethod.updatedAt.toISOString() }
-        : null,
-      createdAt: o.createdAt.toISOString(),
-      updatedAt: o.updatedAt.toISOString(),
-    }));
+    const data = orders.map((o) => toMapOrderToMobileShape(o as OrderWithRelations));
 
     return sendSuccess(res, {
-      data: data,
+      data,
       total,
       page,
       limit,
@@ -79,31 +147,63 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =>
 router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
-    const order = await prisma.order.findFirst({ where: { id: req.params.id, userId: req.user.id }, include: { address: true, paymentMethod: true, items: { include: { product: { include: { category: { select: { id: true, name: true, slug: true } } } } } }, reviews: { include: { user: { select: { id: true, firstName: true, lastName: true } } } } } });
+    const id = typeof req.params.id === 'string' ? req.params.id : req.params.id?.[0];
+    if (!id) return res.status(400).json({ message: 'Invalid id' });
+    const order = await prisma.order.findFirst({ where: { id, userId: req.user.id }, include: { address: true, paymentMethod: true, items: { include: { product: { include: { category: { select: { id: true, name: true, slug: true } } } } } } } });
     if (!order) return res.status(404).json({ message: 'Order not found' });
-    return sendSuccess(res, { ...order, items: order.items.map((i) => ({ ...i, product: { ...i.product, createdAt: i.product.createdAt.toISOString(), updatedAt: i.product.updatedAt.toISOString() }, createdAt: i.createdAt.toISOString() })), address: { ...order.address, createdAt: order.address.createdAt.toISOString(), updatedAt: order.address.updatedAt.toISOString() }, paymentMethod: order.paymentMethod ? { ...order.paymentMethod, createdAt: order.paymentMethod.createdAt.toISOString(), updatedAt: order.paymentMethod.updatedAt.toISOString() } : null, reviews: order.reviews.map((r) => ({ ...r, createdAt: r.createdAt.toISOString(), updatedAt: r.updatedAt.toISOString() })), createdAt: order.createdAt.toISOString(), updatedAt: order.updatedAt.toISOString() });
+    return sendSuccess(res, toMapOrderToMobileShape(order as OrderWithRelations));
   } catch (error) {
     console.error('Get order error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
 
-// POST /api/orders
+// POST /api/orders — accepts mobile payload { shippingAddress, paymentMethod } or legacy { addressId, paymentMethodId? }
 router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user) return res.status(401).json({ message: 'Not authenticated' });
     const body = createOrderSchema.parse(req.body);
     const cartItems = await prisma.cartItem.findMany({ where: { userId: req.user.id }, include: { product: true } });
     if (cartItems.length === 0) return res.status(400).json({ message: 'Cart is empty' });
-    const address = await prisma.address.findFirst({ where: { id: body.addressId, userId: req.user.id } });
-    if (!address) return res.status(404).json({ message: 'Address not found' });
+
+    let addressId: string;
+    let paymentProvider: string | undefined;
+    let paymentMethodId: string | undefined;
+
+    if ('shippingAddress' in body) {
+      const addr = body.shippingAddress;
+      const newAddress = await prisma.address.create({
+        data: {
+          userId: req.user.id,
+          firstName: addr.firstName,
+          lastName: addr.lastName,
+          address: addr.address,
+          apartment: addr.apartment,
+          city: addr.city,
+          state: addr.state,
+          zipCode: addr.zipCode,
+          country: addr.country,
+          phone: addr.phone,
+          isDefault: false,
+        },
+      });
+      addressId = newAddress.id;
+      paymentProvider = body.paymentMethod;
+    } else {
+      const address = await prisma.address.findFirst({ where: { id: body.addressId, userId: req.user.id } });
+      if (!address) return res.status(404).json({ message: 'Address not found' });
+      addressId = body.addressId;
+      paymentMethodId = body.paymentMethodId;
+    }
+
     let subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
     let vat = 0;
     const shippingFee = 80;
     let discount = 0;
-    if (body.couponCode) {
-      const coupon = await prisma.coupon.findUnique({ where: { code: body.couponCode } });
-      if (coupon && coupon.isActive && coupon.usedCount < (coupon.usageLimit || Infinity)) {
+    const couponCode = 'couponCode' in body ? body.couponCode : body.couponCode;
+    if (couponCode) {
+      const coupon = await prisma.coupon.findUnique({ where: { code: couponCode } });
+      if (coupon && coupon.isActive && coupon.usedCount < (coupon.usageLimit ?? Infinity)) {
         if (coupon.discountType === 'percentage') {
           discount = (subtotal * coupon.discountValue) / 100;
           if (coupon.maxDiscount) discount = Math.min(discount, coupon.maxDiscount);
@@ -115,22 +215,23 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
     const order = await prisma.order.create({
       data: {
         userId: req.user.id,
-        addressId: body.addressId,
-        paymentMethodId: body.paymentMethodId || undefined,
+        addressId,
+        paymentMethodId,
+        paymentProvider: paymentProvider ?? undefined,
         status: 'pending',
         subtotal: subtotal + discount,
         vat,
         shippingFee,
         total,
-        couponCode: body.couponCode || undefined,
+        couponCode: couponCode ?? undefined,
         items: { create: cartItems.map((item) => ({ productId: item.productId, quantity: item.quantity, price: item.price, size: item.size, color: item.color })) },
       },
       include: { address: true, paymentMethod: true, items: { include: { product: { include: { category: { select: { id: true, name: true, slug: true } } } } } } },
     });
     await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });
-    if (body.couponCode) await prisma.coupon.update({ where: { code: body.couponCode }, data: { usedCount: { increment: 1 } } });
+    if (couponCode) await prisma.coupon.update({ where: { code: couponCode }, data: { usedCount: { increment: 1 } } });
     await prisma.notification.create({ data: { userId: req.user.id, title: 'Order Placed', message: `Your order #${order.id.slice(0, 8)} has been placed successfully.`, type: 'order' } });
-    return sendSuccess(res, { ...order, items: order.items.map((i) => ({ ...i, product: { ...i.product, createdAt: i.product.createdAt.toISOString(), updatedAt: i.product.updatedAt.toISOString() }, createdAt: i.createdAt.toISOString() })), address: { ...order.address, createdAt: order.address.createdAt.toISOString(), updatedAt: order.address.updatedAt.toISOString() }, paymentMethod: order.paymentMethod ? { ...order.paymentMethod, createdAt: order.paymentMethod.createdAt.toISOString(), updatedAt: order.paymentMethod.updatedAt.toISOString() } : null, createdAt: order.createdAt.toISOString(), updatedAt: order.updatedAt.toISOString() }, undefined, 201);
+    return sendSuccess(res, toMapOrderToMobileShape(order as OrderWithRelations), undefined, 201);
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.issues });
     console.error('Create order error:', error);
@@ -188,32 +289,7 @@ router.post('/:id/cancel', requireAuth, async (req: AuthenticatedRequest, res: R
       },
     });
 
-    return sendSuccess(res, {
-      ...updated,
-      items: updated.items.map((i) => ({
-        ...i,
-        product: {
-          ...i.product,
-          createdAt: i.product.createdAt.toISOString(),
-          updatedAt: i.product.updatedAt.toISOString(),
-        },
-        createdAt: i.createdAt.toISOString(),
-      })),
-      address: {
-        ...updated.address,
-        createdAt: updated.address.createdAt.toISOString(),
-        updatedAt: updated.address.updatedAt.toISOString(),
-      },
-      paymentMethod: updated.paymentMethod
-        ? {
-            ...updated.paymentMethod,
-            createdAt: updated.paymentMethod.createdAt.toISOString(),
-            updatedAt: updated.paymentMethod.updatedAt.toISOString(),
-          }
-        : null,
-      createdAt: updated.createdAt.toISOString(),
-      updatedAt: updated.updatedAt.toISOString(),
-    });
+    return sendSuccess(res, toMapOrderToMobileShape(updated as OrderWithRelations));
   } catch (error) {
     console.error('Cancel order error:', error);
     return res.status(500).json({ message: 'Internal server error' });

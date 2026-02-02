@@ -72,52 +72,43 @@ GET `/cart` now returns `sendSuccess(res, { id, userId, items, subtotal, itemCou
 
 ---
 
-## 6. Order payload and response shape
+## 6. Order payload and response shape ✅ Fixed
 
 **Create order**  
-- Mobile: `CreateOrderPayload` = `{ shippingAddress: ShippingAddress, paymentMethod: 'stripe' | 'paystack' | 'flutterwave' }`.  
-- Backend: expects `{ addressId, paymentMethodId?, couponCode? }`.
-
-**Needed:**  
-- Either:  
-  - Support mobile shape: accept `shippingAddress` (and optionally `paymentMethod` as provider string), create or match address server-side, then create order (and optionally link payment method), or  
-  - Keep backend contract and have mobile send `addressId` (and optional `paymentMethodId`) after creating address/payment method in a previous step.  
-- Document which flow is canonical and align types.
+- Backend now accepts **both** shapes:  
+  - **Mobile:** `{ shippingAddress: { firstName, lastName, address, apartment?, city, state, zipCode, country, phone }, paymentMethod: 'stripe'|'paystack'|'flutterwave', couponCode? }`. Creates address from `shippingAddress`, stores `paymentProvider`.  
+  - **Legacy:** `{ addressId, paymentMethodId?, couponCode? }`.  
+- Response wrapped in `{ success, data }`.
 
 **Order response**  
-- Mobile: `Order` has `orderNumber`, `shipping` (number), `shippingAddress` (object), `paymentMethod` (string), `status` as uppercase enum.  
-- Backend: uses `id` (uuid), `shippingFee`, `address`, `paymentMethod` (object or id), `status` lowercase.
-
-**Needed:**  
-- Map backend order to mobile shape: e.g. `orderNumber` = short id or formatted number, `shipping` = `shippingFee`, `shippingAddress` = from `address`, `paymentMethod` = provider string or label.  
-- Return inside `{ success, data }`.
+- All order endpoints (GET list, GET :id, POST create, POST :id/cancel) now return **mobile shape** inside `{ success, data }`:  
+  - `orderNumber` = `#` + last 8 chars of `id` (uppercase)  
+  - `shipping` = `shippingFee`  
+  - `shippingAddress` = from `address` (firstName, lastName, address, apartment, city, state, zipCode, country, phone)  
+  - `paymentMethod` = `paymentProvider` or `paymentMethod.type` or `'stripe'`  
+  - `status` = uppercase (PENDING, PROCESSING, SHIPPED, DELIVERED, CANCELLED)  
+  - `items` with product and serialized dates
 
 ---
 
-## 7. Payment endpoints
+## 7. Payment endpoints ✅ Fixed (Stripe)
 
 **Create intent**  
-- Mobile: `CreatePaymentIntentPayload` = `{ orderId, provider, amount, currency?, email?, metadata? }`.  
-- Backend: expects `{ amount, currency?, orderId? }` (no `provider`, `email`, `metadata`).
-
-**Needed:**  
-- Extend create-intent body to accept `provider`, `email`, `metadata` and pass through to gateway.  
-- Return shape expected by mobile (e.g. `PaymentIntent` with `id`, `clientSecret`/`authorizationUrl`/`reference`, `amount`, `currency`, `provider`).  
-- Wrap in `{ success, data }`.
+- Backend accepts `CreatePaymentIntentPayload`: `orderId`, `provider`, `amount`, `currency?`, `email?`, `metadata?`.  
+- Stripe: creates PaymentIntent with metadata (userId, orderId), optional receipt_email.  
+- Returns `{ success, data: { id, clientSecret, amount, currency, provider: 'stripe', status } }`.  
+- Non-Stripe providers return 400 (only Stripe implemented).
 
 **Confirm**  
-- Mobile: `ConfirmPaymentPayload` = `{ paymentIntentId, provider, reference? }`.  
-- Backend: `{ paymentIntentId, paymentMethodId? }`.  
-
-**Needed:**  
-- Accept `provider` and `reference`; implement real verification with Stripe/Paystack/Flutterwave.  
-- Return `{ success, data: { success: boolean } }` as expected by mobile.
+- Backend accepts `paymentIntentId`, `provider`, `reference?`, `paymentMethodId?`.  
+- Stripe: retrieves PaymentIntent and returns `{ success, data: { success: boolean, paymentIntentId, status, message } }`.  
+- `data.success` is true when Stripe status is `succeeded`.
 
 **Webhook**  
-- Backend: stub only; no signature verification or order status updates.
-
-**Needed:**  
-- Implement webhook signature verification and handlers that update order/payment status.
+- `POST /api/payments/webhook` mounted with raw body in server.ts.  
+- Stripe signature verified via `STRIPE_WEBHOOK_SECRET`.  
+- `payment_intent.succeeded`: updates order (by metadata.orderId) to `processing`.  
+- `payment_intent.payment_failed`: logged (optional future handling).
 
 ---
 
@@ -127,9 +118,9 @@ GET `/cart` now returns `sendSuccess(res, { id, userId, items, subtotal, itemCou
 |--------|----------|----------------|
 | Forgot password (email) | `auth.ts` | Returns generic message; no email sent. TODO: send reset link/token via email. |
 | Reset password | `auth.ts` | Returns 501 “Password reset not yet implemented”. TODO: verify token and update password. |
-| Create payment intent | `payments.ts` | Mock response. TODO: integrate Stripe/Paystack/Flutterwave. |
-| Confirm payment | `payments.ts` | Always success. TODO: verify with gateway. |
-| Payment webhook | `payments.ts` | No signature verification; no order updates. TODO: verify and handle events. |
+| Create payment intent | `payments.ts` | ✅ Stripe: real PaymentIntent, returns clientSecret. |
+| Confirm payment | `payments.ts` | ✅ Stripe: retrieves PI, returns { success: status === 'succeeded' }. |
+| Payment webhook | `stripeWebhook.ts` + server | ✅ Signature verification; order → processing on payment_intent.succeeded. |
 
 ---
 
