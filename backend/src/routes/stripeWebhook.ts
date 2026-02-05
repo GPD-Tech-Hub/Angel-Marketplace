@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Stripe from 'stripe';
 import { stripe, isStripeEnabled } from '../lib/stripe';
 import { prisma } from '../lib/prisma';
+import { emitNotification } from '../lib/socket';
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -44,12 +45,28 @@ export async function stripeWebhookHandler(req: Request, res: Response): Promise
         if (orderId) {
           const order = await prisma.order.findUnique({
             where: { id: orderId },
-            select: { id: true, status: true },
+            select: { id: true, status: true, userId: true },
           });
           if (order && (order.status === 'pending' || order.status === 'processing')) {
             await prisma.order.update({
               where: { id: orderId },
               data: { status: 'processing' },
+            });
+            const notif = await prisma.notification.create({
+              data: {
+                userId: order.userId,
+                title: 'Payment Received',
+                message: `Your payment for order #${orderId.slice(0, 8)} was successful.`,
+                type: 'payment',
+              },
+            });
+            emitNotification(order.userId, {
+              id: notif.id,
+              title: notif.title,
+              message: notif.message,
+              type: notif.type,
+              read: notif.read,
+              createdAt: notif.createdAt.toISOString(),
             });
             console.log(`Order ${orderId} updated to processing after payment_intent.succeeded`);
           }

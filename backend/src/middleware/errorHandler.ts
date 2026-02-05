@@ -24,10 +24,13 @@ export function errorHandler(
   res: Response,
   next: NextFunction
 ) {
+  // Consistent error shape for mobile: { success: false, message, ...optional }
+  const sendErr = (statusCode: number, message: string, extra?: Record<string, unknown>) =>
+    res.status(statusCode).json({ success: false, message, ...(extra || {}) });
+
   // Zod validation errors
   if (err instanceof ZodError) {
-    return res.status(400).json({
-      message: 'Validation error',
+    return sendErr(400, 'Validation error', {
       errors: err.issues.map((issue) => ({
         path: issue.path.join('.'),
         message: issue.message,
@@ -38,35 +41,30 @@ export function errorHandler(
   // Custom application errors
   if (err instanceof AppError || (err as ApiError).isOperational) {
     const statusCode = (err as ApiError).statusCode || 500;
-    return res.status(statusCode).json({
-      message: err.message || 'An error occurred',
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-    });
+    return sendErr(statusCode, err.message || 'An error occurred',
+      process.env.NODE_ENV === 'development' && err.stack ? { stack: err.stack } : undefined);
   }
 
   // Prisma errors
   if (err.name === 'PrismaClientKnownRequestError') {
     const prismaError = err as any;
     if (prismaError.code === 'P2002') {
-      return res.status(409).json({
-        message: 'A record with this value already exists',
-      });
+      return sendErr(409, 'A record with this value already exists');
     }
     if (prismaError.code === 'P2025') {
-      return res.status(404).json({
-        message: 'Record not found',
-      });
+      return sendErr(404, 'Record not found');
     }
   }
 
   // Default error
   console.error('Error:', err);
-  return res.status(500).json({
-    message: process.env.NODE_ENV === 'production' 
-      ? 'Internal server error' 
+  return sendErr(
+    500,
+    process.env.NODE_ENV === 'production'
+      ? 'Internal server error'
       : err.message || 'An unexpected error occurred',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-  });
+    process.env.NODE_ENV === 'development' && err.stack ? { stack: err.stack } : undefined
+  );
 }
 
 // Async handler wrapper to catch errors in async route handlers

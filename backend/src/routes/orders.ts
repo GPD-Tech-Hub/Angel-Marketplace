@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/authMiddleware';
 import { prisma } from '../lib/prisma';
+import { emitNotification } from '../lib/socket';
 import { z } from 'zod';
 import { sendSuccess } from '../utils/response';
 
@@ -230,7 +231,8 @@ router.post('/', requireAuth, async (req: AuthenticatedRequest, res: Response) =
     });
     await prisma.cartItem.deleteMany({ where: { userId: req.user.id } });
     if (couponCode) await prisma.coupon.update({ where: { code: couponCode }, data: { usedCount: { increment: 1 } } });
-    await prisma.notification.create({ data: { userId: req.user.id, title: 'Order Placed', message: `Your order #${order.id.slice(0, 8)} has been placed successfully.`, type: 'order' } });
+    const notif = await prisma.notification.create({ data: { userId: req.user.id, title: 'Order Placed', message: `Your order #${order.id.slice(0, 8)} has been placed successfully.`, type: 'order' } });
+    emitNotification(req.user.id, { id: notif.id, title: notif.title, message: notif.message, type: notif.type, read: notif.read, createdAt: notif.createdAt.toISOString() });
     return sendSuccess(res, toMapOrderToMobileShape(order as OrderWithRelations), undefined, 201);
   } catch (error) {
     if (error instanceof z.ZodError) return res.status(400).json({ message: 'Validation error', errors: error.issues });
@@ -280,7 +282,7 @@ router.post('/:id/cancel', requireAuth, async (req: AuthenticatedRequest, res: R
     });
 
     // Create notification
-    await prisma.notification.create({
+    const notif = await prisma.notification.create({
       data: {
         userId: req.user.id,
         title: 'Order Cancelled',
@@ -288,6 +290,7 @@ router.post('/:id/cancel', requireAuth, async (req: AuthenticatedRequest, res: R
         type: 'order',
       },
     });
+    emitNotification(req.user.id, { id: notif.id, title: notif.title, message: notif.message, type: notif.type, read: notif.read, createdAt: notif.createdAt.toISOString() });
 
     return sendSuccess(res, toMapOrderToMobileShape(updated as OrderWithRelations));
   } catch (error) {

@@ -61,4 +61,12 @@ export const ENDPOINTS = {
     CONFIRM: '/payments/confirm',
     WEBHOOK: '/payments/webhook',
   },
+
+  // Notifications
+  NOTIFICATIONS: {
+    LIST: '/notifications',
+    UNREAD_COUNT: '/notifications/unread-count',
+    MARK_READ: (id: string) => `/notifications/${id}/read`,
+    SETTINGS: '/notifications/settings',
+  },
 } as const;

@@ -1,10 +1,12 @@
 import { Router, Request, Response } from 'express';
+import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { signAccessToken, signRefreshToken } from '../utils/jwt';
 import { prisma } from '../lib/prisma';
+import { sendPasswordResetEmail } from '../lib/email';
 import { z } from 'zod';
 import { authLimiter, passwordResetLimiter } from '../middleware/rateLimiter';
-import { sendSuccess } from '../utils/response';
+import { sendSuccess, sendError } from '../utils/response';
 
 const router = Router();
 
@@ -32,7 +34,7 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
     });
 
     if (existing) {
-      return res.status(409).json({ message: 'Email already in use' });
+      return sendError(res, 'Email already in use', 409);
     }
 
     // Hash password
@@ -72,10 +74,10 @@ router.post('/register', authLimiter, async (req: Request, res: Response) => {
     }, undefined, 201);
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: 'Validation error', errors: error.issues });
+      return sendError(res, 'Validation error', 400, { errors: error.issues });
     }
     console.error('Register error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    return sendError(res, 'Internal server error', 500);
   }
 });
 
@@ -90,13 +92,13 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
     });
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return sendError(res, 'Invalid credentials', 401);
     }
 
     // Verify password
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      return res.status(401).json({ message: 'Invalid credentials' });
+      return sendError(res, 'Invalid credentials', 401);
     }
 
     // Generate tokens
@@ -117,10 +119,10 @@ router.post('/login', authLimiter, async (req: Request, res: Response) => {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: 'Validation error', errors: error.issues });
+      return sendError(res, 'Validation error', 400, { errors: error.issues });
     }
     console.error('Login error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    return sendError(res, 'Internal server error', 500);
   }
 });
 
@@ -139,7 +141,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
     try {
       payload = verifyRefreshToken(refreshToken);
     } catch (error) {
-      return res.status(401).json({ message: 'Invalid or expired refresh token' });
+      return sendError(res, 'Invalid or expired refresh token', 401);
     }
 
     // Generate new tokens
@@ -153,10 +155,10 @@ router.post('/refresh', async (req: Request, res: Response) => {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: 'Validation error', errors: error.issues });
+      return sendError(res, 'Validation error', 400, { errors: error.issues });
     }
     console.error('Refresh token error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    return sendError(res, 'Internal server error', 500);
   }
 });
 
@@ -168,26 +170,38 @@ const forgotPasswordSchema = z.object({
   email: z.string().email(),
 });
 
+const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000; // 1 hour
+
 router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: Response) => {
   try {
     const body = forgotPasswordSchema.parse(req.body);
     const { email } = body;
 
-    // Find user
     const user = await prisma.user.findUnique({
       where: { email: email.toLowerCase() },
       select: { id: true, email: true },
     });
 
-    // Always return success to prevent email enumeration
+    if (user) {
+      const token = crypto.randomBytes(32).toString('hex');
+      const expiresAt = new Date(Date.now() + RESET_TOKEN_EXPIRY_MS);
+
+      await prisma.passwordResetToken.deleteMany({ where: { userId: user.id } });
+      await prisma.passwordResetToken.create({
+        data: { userId: user.id, token, expiresAt },
+      });
+
+      await sendPasswordResetEmail(user.email, token);
+    }
+
     const message = 'If an account exists, a password reset link has been sent';
     return sendSuccess(res, { message });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: 'Validation error', errors: error.issues });
+      return sendError(res, 'Validation error', 400, { errors: error.issues });
     }
     console.error('Forgot password error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    return sendError(res, 'Internal server error', 500);
   }
 });
 
@@ -201,16 +215,34 @@ router.post('/reset-password', passwordResetLimiter, async (req: Request, res: R
     const body = resetPasswordSchema.parse(req.body);
     const { token, password } = body;
 
-    // In production, verify reset token from database or JWT
-    // For now, return error as token verification is not implemented
-    // TODO: Implement token verification and password reset
-    return res.status(501).json({ message: 'Password reset not yet implemented' });
+    const resetRecord = await prisma.passwordResetToken.findUnique({
+      where: { token },
+      include: { user: true },
+    });
+
+    if (!resetRecord) {
+      return sendError(res, 'Invalid or expired reset link', 400);
+    }
+
+    if (resetRecord.expiresAt < new Date()) {
+      await prisma.passwordResetToken.delete({ where: { id: resetRecord.id } });
+      return sendError(res, 'Reset link has expired', 400);
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+    await prisma.user.update({
+      where: { id: resetRecord.userId },
+      data: { passwordHash },
+    });
+    await prisma.passwordResetToken.delete({ where: { id: resetRecord.id } });
+
+    return sendSuccess(res, { message: 'Password has been reset successfully' });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return res.status(400).json({ message: 'Validation error', errors: error.issues });
+      return sendError(res, 'Validation error', 400, { errors: error.issues });
     }
     console.error('Reset password error:', error);
-    return res.status(500).json({ message: 'Internal server error' });
+    return sendError(res, 'Internal server error', 500);
   }
 });
 

@@ -149,7 +149,7 @@ router.get('/search', async (req: Request, res: Response) => {
       };
     });
 
-    return sendSuccess(res, { products: productsWithRating });
+    return sendSuccess(res, productsWithRating);
   } catch (error) {
     console.error('Search products error:', error);
     return res.status(500).json({ message: 'Internal server error' });

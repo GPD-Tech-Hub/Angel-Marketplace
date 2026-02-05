@@ -5,6 +5,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useAuth } from '@/hooks';
+import { useUnreadNotificationCount } from '@/queries';
+import { NumberBadge } from '@/components/ui/Badge';
 import { profileScreenStyles as styles } from '@/styles/profileScreen';
 
 interface MenuItem {
@@ -20,6 +22,8 @@ export default function ProfileScreen() {
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
   const { isAuthenticated, logout } = useAuth();
+  const { data: unreadData } = useUnreadNotificationCount({ enabled: isAuthenticated });
+  const unreadCount = unreadData?.unreadCount ?? 0;
 
   const menuItems: MenuItem[] = [
     {
@@ -144,6 +148,11 @@ export default function ProfileScreen() {
                   >
                     {item.label}
                   </Text>
+                  {item.label === 'Notifications' && unreadCount > 0 && (
+                    <View style={{ marginRight: 8 }}>
+                      <NumberBadge count={unreadCount} size="sm" />
+                    </View>
+                  )}
                   <Ionicons
                     name="chevron-forward"
                     size={20}

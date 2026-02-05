@@ -19,27 +19,61 @@ const updateSettingsSchema = z.object({
   newTips: z.boolean().optional(),
 });
 
-// GET /api/notifications
+// GET /api/notifications?page=1&limit=20
 router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
     if (!req.user) {
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
-    const notifications = await prisma.notification.findMany({
-      where: { userId: req.user.id },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+    const page = Math.max(1, parseInt(String(req.query.page), 10) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(String(req.query.limit), 10) || 20));
+    const skip = (page - 1) * limit;
+
+    const [notifications, total, unreadCount] = await Promise.all([
+      prisma.notification.findMany({
+        where: { userId: req.user.id },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.notification.count({ where: { userId: req.user.id } }),
+      prisma.notification.count({ where: { userId: req.user.id, read: false } }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
 
     return sendSuccess(res, {
       notifications: notifications.map((n) => ({
         ...n,
         createdAt: n.createdAt.toISOString(),
       })),
+      total,
+      page,
+      limit,
+      totalPages,
+      unreadCount,
     });
   } catch (error) {
     console.error('Get notifications error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+});
+
+// GET /api/notifications/unread-count (lightweight, for badge)
+router.get('/unread-count', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({ message: 'Not authenticated' });
+    }
+
+    const unreadCount = await prisma.notification.count({
+      where: { userId: req.user.id, read: false },
+    });
+
+    return sendSuccess(res, { unreadCount });
+  } catch (error) {
+    console.error('Get unread count error:', error);
     return res.status(500).json({ message: 'Internal server error' });
   }
 });
@@ -51,8 +85,11 @@ router.patch('/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Re
       return res.status(401).json({ message: 'Not authenticated' });
     }
 
+    const id = typeof req.params.id === 'string' ? req.params.id : req.params.id?.[0];
+    if (!id) return res.status(400).json({ message: 'Invalid id' });
+
     const notification = await prisma.notification.findFirst({
-      where: { id: req.params.id, userId: req.user.id },
+      where: { id, userId: req.user.id },
     });
 
     if (!notification) {
@@ -60,7 +97,7 @@ router.patch('/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Re
     }
 
     const updated = await prisma.notification.update({
-      where: { id: req.params.id },
+      where: { id },
       data: { read: true },
     });
 

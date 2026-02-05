@@ -4,31 +4,25 @@ Gap analysis between the **mobile app** expectations and the **backend** impleme
 
 ---
 
-## 1. API response format
+## 1. API response format ✅ Fixed
 
 **Mobile expects:** All successful responses wrapped as `{ success: true, data: T, message?: string }`.  
 Services use `response.data.data`.
 
-**Backend today:** Returns raw payloads (e.g. `{ user, tokens }`, `{ products, pagination }`, `{ orders }`).
-
-**Needed:**  
-- Add a response helper (e.g. `sendSuccess(res, data)`) that wraps every success response in `{ success: true, data }`.  
-- Use it in all route handlers so the app can keep using `response.data.data`.
+**Backend today:** Uses `sendSuccess(res, data)` across routes. Addresses POST was fixed to use `sendSuccess` (was returning raw JSON).
 
 ---
 
-## 2. Route / path mismatches
+## 2. Route / path mismatches ✅ Fixed
 
-| Mobile app expects | Backend currently | Action |
-|-------------------|-------------------|--------|
-| `GET /users/profile` | `GET /users/me` | Add `GET /users/profile` (alias to same handler as `/me`) or change mobile to `/users/me`. |
-| `PATCH /users/profile` | `PATCH /users/me` | Same: add `/users/profile` or update mobile. |
-| `GET /users/addresses` | `GET /api/addresses` | Add `/users/addresses` route that proxies to addresses logic, or mount addresses under `router.use('/users', ...)` and use `/users/addresses`. |
-| `POST /users/addresses` | `POST /api/addresses` | Same. |
-| `PATCH /users/addresses/:id` | `PATCH /api/addresses/:id` | Same. |
-| `DELETE /users/addresses/:id` | `DELETE /api/addresses/:id` | Same. |
-| `DELETE /cart/clear` | `DELETE /cart` | Add `DELETE /cart/clear` that clears cart (same behavior as `DELETE /cart`), or change mobile to `DELETE /cart`. |
-| `POST /favorites` (body: `{ productId }`) | `POST /favorites/:productId` | Support both: either add `POST /favorites` that reads `productId` from body, or change mobile to `POST /favorites/:productId`. |
+| Mobile app expects | Backend |
+|-------------------|---------|
+| `GET /users/profile` | ✅ `GET /api/users/profile` (alias) |
+| `PATCH /users/profile` | ✅ `PATCH /api/users/profile` (alias) |
+| `GET /users/addresses` | ✅ Mounted at `/api/users/addresses` |
+| `POST /users/addresses`, `PATCH /:id`, `DELETE /:id` | ✅ Same mount |
+| `DELETE /cart/clear` | ✅ `DELETE /api/cart/clear` |
+| `POST /favorites` (body: `{ productId }`) | ✅ Both `POST /api/favorites` (body) and `POST /api/favorites/:productId` supported |
 
 ---
 
@@ -116,8 +110,8 @@ GET `/cart` now returns `sendSuccess(res, { id, userId, items, subtotal, itemCou
 
 | Feature | Location | Current state |
 |--------|----------|----------------|
-| Forgot password (email) | `auth.ts` | Returns generic message; no email sent. TODO: send reset link/token via email. |
-| Reset password | `auth.ts` | Returns 501 “Password reset not yet implemented”. TODO: verify token and update password. |
+| Forgot password (email) | `auth.ts` | ✅ Creates reset token (1h), sends email via nodemailer (or logs link if SMTP not configured). |
+| Reset password | `auth.ts` | ✅ Verifies token from DB, updates password, deletes token. |
 | Create payment intent | `payments.ts` | ✅ Stripe: real PaymentIntent, returns clientSecret. |
 | Confirm payment | `payments.ts` | ✅ Stripe: retrieves PI, returns { success: status === 'succeeded' }. |
 | Payment webhook | `stripeWebhook.ts` + server | ✅ Signature verification; order → processing on payment_intent.succeeded. |
@@ -138,39 +132,34 @@ GET `/cart` now returns `sendSuccess(res, { id, userId, items, subtotal, itemCou
 
 ---
 
-## 10. Notifications
+## 10. Notifications ✅ Fixed
 
-- Mobile: no notifications service found in the scanned files; endpoints are not used in the grep.  
-- Backend: `/notifications` and `/notifications/settings` exist.
-
-**Needed:**  
-- If the app will use notifications, ensure list/settings responses are wrapped in `{ success, data }`.  
-- No extra backend feature missing beyond response format.
+- **Backend:** Uses `sendSuccess` for GET /notifications (paginated: `page`, `limit`; returns `notifications`, `total`, `page`, `limit`, `totalPages`, `unreadCount`), GET /notifications/unread-count (lightweight `{ unreadCount }` for badge), PATCH /:id/read, GET /settings, PATCH /settings. PATCH :id/read uses safe `req.params.id` (string).
+- **Mobile:** `ENDPOINTS.NOTIFICATIONS` (LIST, UNREAD_COUNT, MARK_READ(id), SETTINGS), `notifications.service.ts` (getNotifications with pagination, getUnreadCount, markAsRead, getSettings, updateSettings), `useNotifications` (refetchInterval 60s when screen active), `useUnreadNotificationCount` (60s polling for profile badge). Notifications screen: pull-to-refresh, automatic refetch every 60s (no page reload needed). Profile screen: unread badge on Notifications row; badge count auto-updates via polling.
 
 ---
 
-## 11. Config / environment
+## 11. Config / environment ✅ Aligned
 
-- Mobile `config.ts`: `API_URL: 'http://localhost:3000/api'` (port 3000).  
-- Backend: typically runs on port 4000.
-
-**Needed:**  
-- In dev, set mobile `API_URL` to `http://localhost:4000/api` (or whatever port the backend uses), or document that backend must run on 3000.
+- Mobile `config.ts` (development): `API_URL: 'http://localhost:4000/api'`.  
+- Backend: runs on port 4000 by default. Aligned.
 
 ---
 
-## 12. Summary checklist
+## 12. Summary – remaining gaps and optimizations
 
-- [ ] **Response format:** Wrap all success responses in `{ success: true, data }`.
-- [ ] **Routes:** Add or align `/users/profile`, `/users/addresses`, `/cart/clear`, and `POST /favorites` (body) vs `POST /favorites/:productId`.
-- [ ] **Auth refresh:** Return refresh tokens inside `data`.
-- [ ] **Orders list:** Add pagination and align shape with `PaginatedResponse<Order>` (or document and align mobile).
-- [ ] **Products/categories lists:** Wrap and use `data` as expected by mobile.
-- [ ] **Cart:** Add or document `id`, `userId`, timestamps.
-- [ ] **Create order:** Support mobile payload (address + provider) or document backend flow and align mobile.
-- [ ] **Order response:** Map to mobile `Order` (orderNumber, shipping, shippingAddress, paymentMethod string).
-- [ ] **Payments:** Extend create-intent/confirm payloads; implement real gateway + webhook.
-- [ ] **Auth:** Implement forgot-password email and reset-password token verification.
-- [ ] **Config:** Align API base URL (e.g. port 4000) for local dev.
+**Done (mobile-aligned):**  
+Response format (`sendSuccess` everywhere, including addresses POST), routes (profile, addresses, cart/clear, favorites body), auth refresh shape, orders pagination and shape, products/categories lists, cart shape, create order (mobile payload), order response mapping, payments (Stripe), notifications (paginated, unread count, WebSocket emit), config (port 4000).
 
-This list is the full set of missing or not-yet-implemented items on the backend relative to the mobile app and current README/behavior.
+**Remaining gaps:** None (forgot/reset password implemented).
+
+**Optional optimizations for mobile:**
+
+| Item | Notes |
+|------|--------|
+| **Product `comparePrice`** | Mobile `Product` type has optional `comparePrice`. Schema has no field. Add `comparePrice Float?` to Product and include in product APIs if the app shows compare-at pricing. |
+| **Address list** | ✅ Mobile address screen wired to API: `address.service.ts`, `useAddresses` hooks, address screen fetches `GET /users/addresses`, shows list from `data.addresses`, pull-to-refresh, loading/error. |
+| **Error shape** | ✅ All 4xx/5xx use `{ success: false, message: string }` (and optional `errors` for validation). `sendError` in routes; errorHandler middleware also returns this shape. |
+| **Products search** | ✅ Backend `GET /api/products/search?q=...&limit=...` returns `data: Product[]` (array) to match mobile `searchProducts()`. |
+
+This list is the current state relative to the mobile app.

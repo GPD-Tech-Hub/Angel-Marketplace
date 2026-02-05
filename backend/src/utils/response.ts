@@ -14,9 +14,15 @@ export function sendSuccess<T>(res: Response, data: T, message?: string, statusC
   });
 }
 
-export function sendError(res: Response, message: string, statusCode: number = 500): Response {
+export function sendError(
+  res: Response,
+  message: string,
+  statusCode: number = 500,
+  extra?: Record<string, unknown>
+): Response {
   return res.status(statusCode).json({
     success: false,
     message,
+    ...(extra && Object.keys(extra).length > 0 ? extra : {}),
   });
 }

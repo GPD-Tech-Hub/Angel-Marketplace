@@ -821,9 +821,25 @@ const options: swaggerJsdoc.Options = {
       '/notifications': {
         get: {
           tags: ['Notifications'],
-          summary: 'List notifications',
+          summary: 'List notifications (paginated)',
           security: [{ bearerAuth: [] }],
-          responses: { 200: { description: 'Notifications' } },
+          parameters: [
+            { name: 'page', in: 'query', schema: { type: 'integer', default: 1 } },
+            { name: 'limit', in: 'query', schema: { type: 'integer', default: 20 } },
+          ],
+          responses: {
+            200: {
+              description: 'data: { notifications, total, page, limit, totalPages, unreadCount }',
+            },
+          },
+        },
+      },
+      '/notifications/unread-count': {
+        get: {
+          tags: ['Notifications'],
+          summary: 'Get unread count (for badge)',
+          security: [{ bearerAuth: [] }],
+          responses: { 200: { description: 'data: { unreadCount }' } },
         },
       },
       '/notifications/{id}/read': {
