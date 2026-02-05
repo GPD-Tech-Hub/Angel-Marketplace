@@ -1,11 +1,23 @@
 import { Router, Request, Response } from 'express';
 import { AuthenticatedRequest, requireAuth } from '../middleware/authMiddleware';
 import { prisma } from '../lib/prisma';
-import { stripe, isStripeEnabled } from '../lib/stripe';
+import { stripe, isStripeEnabled, getStripePublishableKey, isLive } from '../lib/stripe';
 import { z } from 'zod';
 import { sendSuccess } from '../utils/response';
 
 const router = Router();
+
+// GET /api/payments/config — public; returns Stripe publishable key for current env (single source of truth for mobile)
+router.get('/config', (_req: Request, res: Response) => {
+  const enabled = isStripeEnabled();
+  const publishableKey = enabled ? getStripePublishableKey() : null;
+  const stripeEnvironment = isLive() ? 'live' : 'test';
+  return sendSuccess(res, {
+    stripePublishableKey: publishableKey || null,
+    stripeEnvironment,
+    stripeEnabled: enabled,
+  });
+});
 
 const paymentMethodSchema = z.object({
   type: z.string(),
@@ -104,7 +116,7 @@ router.post('/create-intent', requireAuth, async (req: AuthenticatedRequest, res
 
     if (!isStripeEnabled()) {
       return res.status(503).json({
-        message: 'Stripe is not configured. Set STRIPE_SECRET_KEY in environment.',
+        message: 'Stripe is not configured. Set STRIPE_TEST_SECRET_KEY or STRIPE_LIVE_SECRET_KEY (or STRIPE_SECRET_KEY) per STRIPE_ENVIRONMENT.',
       });
     }
 
@@ -167,7 +179,7 @@ router.post('/confirm', requireAuth, async (req: AuthenticatedRequest, res: Resp
 
     if (!isStripeEnabled()) {
       return res.status(503).json({
-        message: 'Stripe is not configured. Set STRIPE_SECRET_KEY in environment.',
+        message: 'Stripe is not configured. Set STRIPE_TEST_SECRET_KEY or STRIPE_LIVE_SECRET_KEY (or STRIPE_SECRET_KEY) per STRIPE_ENVIRONMENT.',
       });
     }
 

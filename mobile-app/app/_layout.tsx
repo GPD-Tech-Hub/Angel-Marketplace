@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useAuthStore } from '@/store';
 import { ToastProvider } from '@/components/ui';
+import { StripeProviderWrapper } from '@/components/layout/StripeProviderWrapper';
 import '../global.css';
 
 // Create a client
@@ -28,8 +29,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <SafeAreaProvider>
-          <ToastProvider>
+        <StripeProviderWrapper>
+          <SafeAreaProvider>
+            <ToastProvider>
             <Stack
               screenOptions={{
                 headerShown: false,
@@ -53,7 +55,8 @@ export default function RootLayout() {
             </Stack>
             <StatusBar style="auto" />
           </ToastProvider>
-        </SafeAreaProvider>
+          </SafeAreaProvider>
+        </StripeProviderWrapper>
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

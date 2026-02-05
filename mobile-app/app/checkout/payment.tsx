@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui';
+import { useStripeConfig } from '@/queries';
 
 type PaymentMethod = 'stripe' | 'paystack' | 'flutterwave';
 
@@ -13,7 +14,7 @@ interface PaymentOption {
   icon: keyof typeof Ionicons.glyphMap;
 }
 
-const paymentOptions: PaymentOption[] = [
+const ALL_PAYMENT_OPTIONS: PaymentOption[] = [
   {
     id: 'stripe',
     name: 'Credit/Debit Card',
@@ -37,7 +38,14 @@ const paymentOptions: PaymentOption[] = [
 export default function PaymentScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ shippingAddress: string }>();
+  const { data: stripeConfig } = useStripeConfig();
   const [selectedMethod, setSelectedMethod] = useState<PaymentMethod | null>(null);
+
+  const paymentOptions = useMemo(() => {
+    return ALL_PAYMENT_OPTIONS.filter(
+      (opt) => opt.id !== 'stripe' || stripeConfig?.stripeEnabled
+    );
+  }, [stripeConfig?.stripeEnabled]);
 
   const shippingAddress = params.shippingAddress
     ? JSON.parse(params.shippingAddress)

@@ -1,6 +1,13 @@
 import api from './api';
 import { ENDPOINTS } from '@/constants/endpoints';
 import { ApiResponse } from '@/types';
+import { config } from '@/constants/config';
+
+export interface StripeConfig {
+  stripePublishableKey: string | null;
+  stripeEnvironment: 'test' | 'live';
+  stripeEnabled: boolean;
+}
 
 export interface PaymentIntent {
   id: string;
@@ -28,6 +35,25 @@ export interface ConfirmPaymentPayload {
 }
 
 export const paymentService = {
+  /** Fetches Stripe config from backend (single source of truth). Fallback to app config when API fails or Stripe disabled. */
+  async getStripeConfig(): Promise<StripeConfig> {
+    try {
+      const response = await api.get<ApiResponse<StripeConfig>>(ENDPOINTS.PAYMENTS.CONFIG);
+      const data = response.data.data;
+      return {
+        stripePublishableKey: data.stripePublishableKey || config.STRIPE_PUBLISHABLE_KEY || null,
+        stripeEnvironment: data.stripeEnvironment,
+        stripeEnabled: data.stripeEnabled,
+      };
+    } catch {
+      return {
+        stripePublishableKey: config.STRIPE_PUBLISHABLE_KEY || null,
+        stripeEnvironment: 'test',
+        stripeEnabled: !!config.STRIPE_PUBLISHABLE_KEY,
+      };
+    }
+  },
+
   async createPaymentIntent(
     payload: CreatePaymentIntentPayload
   ): Promise<PaymentIntent> {

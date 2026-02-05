@@ -12,7 +12,7 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
  */
 export async function stripeWebhookHandler(req: Request, res: Response): Promise<void> {
   if (!isStripeEnabled() || !webhookSecret) {
-    res.status(503).send('Stripe webhook not configured (STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET missing)');
+    res.status(503).send('Stripe webhook not configured (set STRIPE_WEBHOOK_SECRET and STRIPE_TEST_SECRET_KEY or STRIPE_LIVE_SECRET_KEY per STRIPE_ENVIRONMENT)');
     return;
   }
 

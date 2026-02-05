@@ -57,6 +57,7 @@ export const ENDPOINTS = {
 
   // Payments
   PAYMENTS: {
+    CONFIG: '/payments/config',
     CREATE_INTENT: '/payments/create-intent',
     CONFIRM: '/payments/confirm',
     WEBHOOK: '/payments/webhook',

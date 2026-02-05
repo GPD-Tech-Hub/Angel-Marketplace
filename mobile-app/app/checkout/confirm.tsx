@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
+import { useStripe } from '@stripe/stripe-react-native';
 import { useCart } from '@/hooks';
 import { useCreateOrder } from '@/queries';
 import { Button, Card } from '@/components/ui';
@@ -10,6 +11,7 @@ import { CartSummary } from '@/components/cart';
 import { formatCurrency } from '@/utils';
 import { ShippingAddress } from '@/types';
 import { config } from '@/constants/config';
+import { paymentService } from '@/services/payment.service';
 
 export default function ConfirmScreen() {
   const router = useRouter();
@@ -19,6 +21,7 @@ export default function ConfirmScreen() {
   }>();
   const { items, subtotal, clearCart } = useCart();
   const createOrderMutation = useCreateOrder();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const shippingAddress: ShippingAddress = params.shippingAddress
@@ -43,16 +46,50 @@ export default function ConfirmScreen() {
 
     setIsProcessing(true);
     try {
-      // Create order
+      // Create order (backend clears cart and returns order with total)
       const order = await createOrderMutation.mutateAsync({
         shippingAddress,
         paymentMethod,
       });
 
-      // Clear cart
-      clearCart();
+      if (paymentMethod === 'stripe') {
+        // Stripe: create payment intent and present Payment Sheet
+        const intent = await paymentService.createPaymentIntent({
+          orderId: order.id,
+          amount: order.total,
+          currency: config.CURRENCY,
+          provider: 'stripe',
+        });
+        if (!intent.clientSecret) {
+          Alert.alert('Payment Error', 'Could not start payment. Please try again.');
+          setIsProcessing(false);
+          return;
+        }
+        const { error: initError } = await initPaymentSheet({
+          paymentIntentClientSecret: intent.clientSecret,
+          merchantDisplayName: config.APP_NAME,
+        });
+        if (initError) {
+          Alert.alert('Payment Error', initError.message || 'Could not initialize payment.');
+          setIsProcessing(false);
+          return;
+        }
+        const { error: presentError } = await presentPaymentSheet();
+        if (presentError) {
+          Alert.alert(
+            presentError.code === 'Canceled' ? 'Canceled' : 'Payment Failed',
+            presentError.message || 'Payment was not completed.'
+          );
+          setIsProcessing(false);
+          return;
+        }
+        clearCart();
+        router.replace(`/order/${order.id}`);
+        return;
+      }
 
-      // Navigate to order confirmation
+      // Non-Stripe: order already created and cart cleared by backend
+      clearCart();
       router.replace(`/order/${order.id}`);
     } catch (error: any) {
       Alert.alert(

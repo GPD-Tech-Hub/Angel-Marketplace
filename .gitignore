@@ -21,3 +21,6 @@ prisma/dev.db-journal
 
 
 /src/generated/prisma
+
+# PHP Stripe reference (local only)
+stripe/
