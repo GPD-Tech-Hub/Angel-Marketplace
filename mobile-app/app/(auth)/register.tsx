@@ -13,7 +13,7 @@ export default function RegisterScreen() {
   const router = useRouter();
   const [isLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { horizontalPadding, headingSize } = useResponsive();
+  const { horizontalPadding } = useResponsive();
   const insets = useSafeAreaInsets();
 
   const {
@@ -98,7 +98,7 @@ export default function RegisterScreen() {
           >
             {/* Header */}
             <View className="mb-10 mt-4">
-              <Text className={`${headingSize} font-bold text-black mb-2`}>
+              <Text className="text-3xl font-bold text-black mb-2">
                 Create an account
               </Text>
               <Text className="text-base text-gray-500">

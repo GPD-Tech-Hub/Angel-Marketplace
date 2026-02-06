@@ -12,7 +12,7 @@ import { forgotPasswordSchema, ForgotPasswordInput } from '@/utils/validation';
 export default function ForgotPasswordScreen() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const { horizontalPadding, headingSize } = useResponsive();
+  const { horizontalPadding } = useResponsive();
   const insets = useSafeAreaInsets();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -72,7 +72,7 @@ export default function ForgotPasswordScreen() {
 
             {/* Header */}
             <View className="mb-6">
-              <Text className={`${headingSize} font-bold text-black mb-3`}>
+              <Text className="text-3xl font-bold text-black mb-3">
                 Forgot password
               </Text>
               <Text className="text-base text-gray-500 leading-6">

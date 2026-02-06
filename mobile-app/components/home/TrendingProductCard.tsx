@@ -2,6 +2,13 @@ import React from 'react';
 import { View, Text, Pressable, StyleProp, ViewStyle, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { trendingProductCardStyles as styles } from '@/styles/trendingProductCard';
 import { useFavoritesStore } from '@/store';
 
@@ -25,6 +32,18 @@ export function TrendingProductCard({ item, style, onPress, onFavoritePress }: P
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
   const starSize = Math.round(13 * scale);
   const isFavorite = useFavoritesStore((state) => state.isFavorite(item.id));
+  const favScale = useSharedValue(1);
+  const favAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: favScale.value }],
+  }));
+
+  const handleFavoritePress = () => {
+    favScale.value = withSequence(
+      withTiming(1.2, { duration: 60, easing: Easing.out(Easing.ease) }),
+      withTiming(1, { duration: 100, easing: Easing.out(Easing.ease) })
+    );
+    onFavoritePress?.(item);
+  };
 
   return (
     <Pressable
@@ -38,11 +57,18 @@ export function TrendingProductCard({ item, style, onPress, onFavoritePress }: P
 
             <Pressable
               style={styles.favButton}
-              onPress={() => onFavoritePress?.(item)}
+              onPress={handleFavoritePress}
               hitSlop={10}
             >
               {({ pressed: favPressed }) => (
-                <View style={[styles.favButtonInner, isFavorite && styles.favButtonActive, { opacity: favPressed ? 0.8 : 1 }]}>
+                <Animated.View
+                  style={[
+                    styles.favButtonInner,
+                    isFavorite && styles.favButtonActive,
+                    { opacity: favPressed ? 0.8 : 1 },
+                    favAnimatedStyle,
+                  ]}
+                >
                   <Image
                     source={
                       isFavorite
@@ -53,7 +79,7 @@ export function TrendingProductCard({ item, style, onPress, onFavoritePress }: P
                     contentFit="contain"
                     tintColor={isFavorite ? '#FFFFFF' : undefined}
                   />
-                </View>
+                </Animated.View>
               )}
             </Pressable>
           </View>

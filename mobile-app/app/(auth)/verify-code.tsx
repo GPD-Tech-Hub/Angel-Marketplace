@@ -12,7 +12,7 @@ export default function VerifyCodeScreen() {
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { horizontalPadding, headingSize } = useResponsive();
+  const { horizontalPadding } = useResponsive();
   const insets = useSafeAreaInsets();
 
   // Get email from params or use a default/placeholder
@@ -65,7 +65,7 @@ export default function VerifyCodeScreen() {
 
             {/* Header */}
             <View className="mb-8 items-center">
-              <Text className={`${headingSize} font-bold text-black mb-3 text-center`}>
+              <Text className="text-3xl font-bold text-black mb-3 text-center">
                 Enter 4 digit code
               </Text>
               <Text className="text-base text-gray-500 text-center leading-6 px-4">

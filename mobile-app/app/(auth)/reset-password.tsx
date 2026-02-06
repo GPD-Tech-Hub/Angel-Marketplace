@@ -11,7 +11,7 @@ import { resetPasswordSchema } from '@/utils/validation';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
-  const { horizontalPadding, headingSize } = useResponsive();
+  const { horizontalPadding } = useResponsive();
   const insets = useSafeAreaInsets();
   const [submitted, setSubmitted] = useState(false);
 
@@ -61,7 +61,7 @@ export default function ResetPasswordScreen() {
 
             {/* Header */}
             <View className="mb-10">
-              <Text className={`${headingSize} font-bold text-black mb-3`}>
+              <Text className="text-3xl font-bold text-black mb-3">
                 Reset password
               </Text>
               <Text className="text-base text-gray-500 leading-6">

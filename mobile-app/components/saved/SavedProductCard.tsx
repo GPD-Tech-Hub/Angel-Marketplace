@@ -2,6 +2,13 @@ import React from 'react';
 import { View, Text, Pressable, StyleProp, ViewStyle, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSequence,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { savedProductCardStyles as styles } from '@/styles/savedProductCard';
 import { Product } from '@/types';
 
@@ -17,6 +24,18 @@ export function SavedProductCard({ product, style, onPress, onFavoritePress, isF
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
   const starSize = Math.round(13 * scale);
+  const favScale = useSharedValue(1);
+  const favAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: favScale.value }],
+  }));
+
+  const handleFavoritePress = () => {
+    favScale.value = withSequence(
+      withTiming(1.2, { duration: 60, easing: Easing.out(Easing.ease) }),
+      withTiming(1, { duration: 100, easing: Easing.out(Easing.ease) })
+    );
+    onFavoritePress?.(product);
+  };
 
   // Use first image from product, or fallback
   const productImage = product.images && product.images.length > 0 
@@ -39,17 +58,23 @@ export function SavedProductCard({ product, style, onPress, onFavoritePress, isF
 
             <Pressable
               style={styles.favButton}
-              onPress={() => onFavoritePress?.(product)}
+              onPress={handleFavoritePress}
               hitSlop={10}
             >
               {({ pressed: favPressed }) => (
-                <View style={[styles.favButtonInner, { opacity: favPressed ? 0.8 : 1 }]}>
+                <Animated.View
+                  style={[
+                    styles.favButtonInner,
+                    { opacity: favPressed ? 0.8 : 1 },
+                    favAnimatedStyle,
+                  ]}
+                >
                   <Image
                     source={require('../../assets/icons/Heart-duotone.png')}
                     style={styles.favIcon}
                     contentFit="contain"
                   />
-                </View>
+                </Animated.View>
               )}
             </Pressable>
           </View>
