@@ -39,6 +39,7 @@ export default function AddressScreen() {
 
   const { data, isLoading, isError, error, refetch, isRefetching } = useAddresses();
   const addresses = data?.addresses ?? [];
+
   const defaultAddress = useMemo(
     () => addresses.find((a) => a.isDefault) || addresses[0],
     [addresses]
