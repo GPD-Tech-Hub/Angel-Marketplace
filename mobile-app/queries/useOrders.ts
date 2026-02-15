@@ -17,8 +17,8 @@ export const orderKeys = {
   detail: (id: string) => [...orderKeys.details(), id] as const,
 };
 
-// Get user orders (infinite scroll)
-export function useOrders() {
+// Get user orders (infinite scroll). Pass { enabled: isAuthenticated } to avoid 401 when logged out.
+export function useOrders(options?: { enabled?: boolean }) {
   return useInfiniteQuery({
     queryKey: orderKeys.list(),
     queryFn: ({ pageParam = 1 }) =>
@@ -30,6 +30,7 @@ export function useOrders() {
       return undefined;
     },
     initialPageParam: 1,
+    enabled: options?.enabled !== false,
   });
 }
 

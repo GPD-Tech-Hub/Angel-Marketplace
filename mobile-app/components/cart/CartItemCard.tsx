@@ -5,38 +5,38 @@ import { Ionicons } from '@expo/vector-icons';
 import { CartItem } from '@/types';
 import { useCart } from '@/hooks';
 import { cartItemCardStyles as styles } from '@/styles/cartItemCard';
+import { config } from '@/constants/config';
 
 type Props = {
   item: CartItem;
+  /** When provided (e.g. API cart), use these instead of store */
+  onIncrement?: (item: CartItem) => void;
+  onDecrement?: (item: CartItem) => void;
+  onRemove?: (item: CartItem) => void;
 };
 
-export function CartItemCard({ item }: Props) {
+export function CartItemCard({ item, onIncrement, onDecrement, onRemove }: Props) {
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
-  const { increment, decrement, removeFromCart } = useCart();
+  const storeCart = useCart();
   const { product, quantity, price } = item;
+  const useApi = !!onIncrement;
+  const increment = useApi ? () => onIncrement?.(item) : () => storeCart.increment(item.productId);
+  const decrement = useApi ? () => onDecrement?.(item) : () => storeCart.decrement(item.productId);
+  const removeFromCart = useApi ? () => onRemove?.(item) : () => storeCart.removeFromCart(item.productId);
 
-  // Use first image from product, or fallback
-  // Handle both local require() images and URI strings
   const getProductImage = () => {
     if (!product.images || product.images.length === 0) {
-      return require('../../assets/image/image 2.jpg');
+      return { uri: config.IMAGE_PLACEHOLDER };
     }
-    
     const imagePath = product.images[0];
-    
-    // If it's a local image name (for mock data), convert to require
-    if (imagePath === 'image 2.jpg') {
-      return require('../../assets/image/image 2.jpg');
+    if (typeof imagePath === 'string' && (imagePath.startsWith('http') || imagePath.startsWith('data:'))) {
+      return { uri: imagePath };
     }
-    if (imagePath === 'image 1.jpg') {
-      return require('../../assets/image/image 1.jpg');
-    }
-    
-    // Otherwise, treat as URI
-    return { uri: imagePath };
+    if (imagePath === 'image 2.jpg') return require('../../assets/image/image 2.jpg');
+    if (imagePath === 'image 1.jpg') return require('../../assets/image/image 1.jpg');
+    return { uri: typeof imagePath === 'string' ? imagePath : config.IMAGE_PLACEHOLDER };
   };
-  
   const productImage = getProductImage();
 
   // Mock size - in real app, this would come from the cart item

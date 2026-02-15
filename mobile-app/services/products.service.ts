@@ -68,6 +68,13 @@ export const productsService = {
     );
     return response.data.data;
   },
+
+  async getTrending(limit: number = 10): Promise<Product[]> {
+    const response = await api.get<ApiResponse<{ products: Product[] }>>(
+      `${ENDPOINTS.PRODUCTS.TRENDING}?limit=${limit}`
+    );
+    return response.data.data.products ?? [];
+  },
 };
 
 export default productsService;

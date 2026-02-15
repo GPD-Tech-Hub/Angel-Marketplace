@@ -5,6 +5,8 @@ export interface User {
   lastName: string;
   phone?: string;
   avatar?: string;
+  dateOfBirth?: string;
+  gender?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -52,4 +54,6 @@ export interface UpdateProfileData {
   lastName?: string;
   phone?: string;
   avatar?: string;
+  dateOfBirth?: string;
+  gender?: string;
 }

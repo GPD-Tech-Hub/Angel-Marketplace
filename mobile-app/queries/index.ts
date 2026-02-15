@@ -5,3 +5,4 @@ export * from './useUser';
 export * from './useAddresses';
 export * from './useNotifications';
 export * from './useStripeConfig';
+export * from './useCart';

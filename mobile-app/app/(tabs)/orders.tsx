@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import { View, Text, ScrollView, Pressable, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,104 +8,30 @@ import { OrderStatusTabs } from '@/components/orders/OrderStatusTabs';
 import { EmptyOrders } from '@/components/orders/EmptyOrders';
 import { LeaveReviewModal } from '@/components/orders/LeaveReviewModal';
 import { ordersScreenStyles as styles } from '@/styles/ordersScreen';
+import { useOrders } from '@/queries';
+import { useAuthStore } from '@/store';
+import { config } from '@/constants/config';
+import type { Order, OrderItem } from '@/types';
 
 type OrderStatus = 'ongoing' | 'completed';
 
-interface Order {
-  id: string;
-  productName: string;
-  size: string;
-  price: number;
-  status: string;
-  image: any;
-  rating?: number; // Optional rating for completed orders
+function orderItemToCard(
+  order: Order & { reviews?: { rating: number }[] },
+  item: OrderItem,
+  index: number
+): { id: string; productName: string; size: string; price: number; status: string; image: any; rating?: number } {
+  const imageUri = item.product?.images?.[0] || config.IMAGE_PLACEHOLDER;
+  const rating = order.reviews?.[0]?.rating;
+  return {
+    id: `${order.id}-${item.id}-${index}`,
+    productName: item.product?.name ?? 'Product',
+    size: '-',
+    price: item.price * item.quantity,
+    status: order.status,
+    image: typeof imageUri === 'string' ? { uri: imageUri } : imageUri,
+    rating: rating != null ? Number(rating) : undefined,
+  };
 }
-
-// Mock data for orders
-const MOCK_ONGOING_ORDERS: Order[] = [
-  {
-    id: '1',
-    productName: 'Premium Jacket',
-    size: 'M',
-    price: 90,
-    status: 'In Transit',
-    image: require('../../assets/image/image 1.jpg'),
-  },
-  {
-    id: '2',
-    productName: 'Premium Jacket',
-    size: 'M',
-    price: 90,
-    status: 'In Transit',
-    image: require('../../assets/image/image 1.jpg'),
-  },
-  {
-    id: '3',
-    productName: 'Premium Jacket',
-    size: 'M',
-    price: 90,
-    status: 'In Transit',
-    image: require('../../assets/image/image 1.jpg'),
-  },
-  {
-    id: '4',
-    productName: 'Premium Jacket',
-    size: 'M',
-    price: 90,
-    status: 'In Transit',
-    image: require('../../assets/image/image 1.jpg'),
-  },
-  {
-    id: '5',
-    productName: 'Premium Jacket',
-    size: 'M',
-    price: 90,
-    status: 'In Transit',
-    image: require('../../assets/image/image 1.jpg'),
-  },
-];
-
-const MOCK_COMPLETED_ORDERS: Order[] = [
-  {
-    id: '6',
-    productName: 'Premium Jacket',
-    size: 'M',
-    price: 90,
-    status: 'Completed',
-    image: require('../../assets/image/image 1.jpg'),
-    // No rating - will show "Leave Review" button
-  },
-  {
-    id: '7',
-    productName: 'Premium Jacket',
-    size: 'M',
-    price: 90,
-    status: 'Completed',
-    image: require('../../assets/image/image 1.jpg'),
-    rating: 4.5, // Has rating - will show star rating
-  },
-  {
-    id: '8',
-    productName: 'Premium Jacket',
-    size: 'M',
-    price: 90,
-    status: 'Completed',
-    image: require('../../assets/image/image 1.jpg'),
-    // No rating - will show "Leave Review" button
-  },
-  {
-    id: '9',
-    productName: 'Premium Jacket',
-    size: 'M',
-    price: 90,
-    status: 'Completed',
-    image: require('../../assets/image/image 1.jpg'),
-    rating: 3.5, // Has rating - will show star rating
-  },
-];
-
-// Flag to toggle between mock data and empty state
-const USE_MOCK_DATA = true;
 
 export default function OrdersScreen() {
   const router = useRouter();
@@ -115,29 +41,45 @@ export default function OrdersScreen() {
   const [reviewModalVisible, setReviewModalVisible] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
-  const orders = activeTab === 'ongoing' ? MOCK_ONGOING_ORDERS : MOCK_COMPLETED_ORDERS;
-  const hasOrders = USE_MOCK_DATA && orders.length > 0;
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { data, isLoading, isError, refetch } = useOrders({ enabled: isAuthenticated });
+
+  const allOrders = useMemo(() => {
+    const pages = data?.pages ?? [];
+    return pages.flatMap((p) => p.data ?? []);
+  }, [data]);
+
+  const ongoingOrders = useMemo(
+    () => allOrders.filter((o) => o.status !== 'DELIVERED' && o.status !== 'CANCELLED'),
+    [allOrders]
+  );
+  const completedOrders = useMemo(
+    () => allOrders.filter((o) => o.status === 'DELIVERED'),
+    [allOrders]
+  );
+
+  const cards = useMemo(() => {
+    const list = activeTab === 'ongoing' ? ongoingOrders : completedOrders;
+    return list.flatMap((order) =>
+      (order.items ?? []).map((item, i) => orderItemToCard(order as Order & { reviews?: { rating: number }[] }, item, i))
+    );
+  }, [activeTab, ongoingOrders, completedOrders]);
+
+  const hasOrders = cards.length > 0;
 
   const handleTrackOrder = (orderId: string) => {
-    router.push(`/order/${orderId}`);
+    const baseId = orderId.split('-')[0];
+    if (baseId) router.push(`/order/${baseId}`);
   };
 
   const handleLeaveReview = (orderId: string) => {
-    setSelectedOrderId(orderId);
+    const baseId = orderId.split('-')[0];
+    if (baseId) setSelectedOrderId(baseId);
     setReviewModalVisible(true);
   };
 
-  const handleReviewSubmit = (rating: number, review: string) => {
-    // TODO: Submit review to backend
-    console.log('Review submitted:', {
-      orderId: selectedOrderId,
-      rating,
-      review,
-    });
-    
-    // Update the order in mock data to show rating
-    // In a real app, this would update the backend and refresh the data
-    // For now, we'll just close the modal
+  const handleReviewSubmit = () => {
+    refetch();
   };
 
   const handleCloseModal = () => {
@@ -145,53 +87,61 @@ export default function OrdersScreen() {
     setSelectedOrderId(null);
   };
 
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} hitSlop={10}>
+            <Ionicons name="chevron-back" size={24} color="#111827" />
+          </Pressable>
+          <Text style={[styles.headerTitle, { fontSize: Math.round(20 * scale) }]}>My Orders</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        <EmptyOrders status="ongoing" />
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-          hitSlop={10}
-        >
+        <Pressable style={styles.backButton} onPress={() => router.back()} hitSlop={10}>
           {({ pressed }) => (
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color="#111827"
-              style={{ opacity: pressed ? 0.7 : 1 }}
-            />
+            <Ionicons name="chevron-back" size={24} color="#111827" style={{ opacity: pressed ? 0.7 : 1 }} />
           )}
         </Pressable>
-        <Text style={[styles.headerTitle, { fontSize: Math.round(20 * scale) }]}>
-          My Orders
-        </Text>
+        <Text style={[styles.headerTitle, { fontSize: Math.round(20 * scale) }]}>My Orders</Text>
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Order Status Tabs */}
       <OrderStatusTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-      {/* Content */}
-      {hasOrders ? (
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {orders.map((order) => (
+      {isLoading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 }}>
+          <ActivityIndicator size="large" color="#F43F5E" />
+        </View>
+      ) : isError ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
+          <Text style={{ color: '#6B7280', marginBottom: 12 }}>Failed to load orders</Text>
+          <Pressable onPress={() => refetch()}>
+            <Text style={{ color: '#F43F5E' }}>Try again</Text>
+          </Pressable>
+        </View>
+      ) : hasOrders ? (
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {cards.map((card) => (
             <OrderItemCard
-              key={order.id}
-              id={order.id}
-              productName={order.productName}
-              size={order.size}
-              price={order.price}
-              status={order.status}
-              image={order.image}
+              key={card.id}
+              id={card.id}
+              productName={card.productName}
+              size={card.size}
+              price={card.price}
+              status={card.status}
+              image={card.image}
               isCompleted={activeTab === 'completed'}
-              rating={order.rating}
-              onTrackOrder={() => handleTrackOrder(order.id)}
-              onLeaveReview={() => handleLeaveReview(order.id)}
+              rating={card.rating}
+              onTrackOrder={() => handleTrackOrder(card.id)}
+              onLeaveReview={() => handleLeaveReview(card.id)}
             />
           ))}
         </ScrollView>
@@ -199,7 +149,6 @@ export default function OrdersScreen() {
         <EmptyOrders status={activeTab} />
       )}
 
-      {/* Leave Review Modal */}
       <LeaveReviewModal
         visible={reviewModalVisible}
         onClose={handleCloseModal}

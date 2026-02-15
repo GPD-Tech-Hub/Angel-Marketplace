@@ -22,6 +22,7 @@ export const ENDPOINTS = {
     LIST: '/products',
     DETAIL: (slug: string) => `/products/${slug}`,
     SEARCH: '/products/search',
+    TRENDING: '/products/trending',
   },
 
   // Categories

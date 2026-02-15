@@ -8,13 +8,17 @@ import { useResponsive } from '@/hooks';
 import { FormButton, FormField, type FormFieldConfig } from '@/components/ui';
 import { registerSchema, RegisterInput } from '@/utils/validation';
 import { Image } from 'expo-image';
+import { authService } from '@/services';
+import { useAuthStore } from '@/store';
+import { AxiosError } from 'axios';
 
 export default function RegisterScreen() {
   const router = useRouter();
-  const [isLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { horizontalPadding } = useResponsive();
   const insets = useSafeAreaInsets();
+  const loginStore = useAuthStore((state) => state.login);
 
   const {
     control,
@@ -31,10 +35,21 @@ export default function RegisterScreen() {
     },
   });
 
-  const onSubmit = async (_data: RegisterInput) => {
+  const onSubmit = async (data: RegisterInput) => {
     setError(null);
-    // No backend auth yet — go straight to Home.
-    router.replace('/(tabs)');
+    setIsLoading(true);
+    try {
+      const { user, tokens } = await authService.register(data);
+      await loginStore(user, tokens);
+      router.replace('/(tabs)');
+    } catch (err) {
+      const message = err instanceof AxiosError && err.response?.data?.message
+        ? String(err.response.data.message)
+        : err instanceof Error ? err.message : 'Registration failed';
+      setError(message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const formFields: FormFieldConfig[] = [

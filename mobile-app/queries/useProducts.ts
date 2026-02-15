@@ -51,3 +51,12 @@ export function useProductSearch(query: string, enabled: boolean = true) {
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
+
+// Trending products (for home)
+export function useTrendingProducts(limit: number = 10) {
+  return useQuery({
+    queryKey: [...productKeys.all, 'trending', limit] as const,
+    queryFn: () => productsService.getTrending(limit),
+    staleTime: 1000 * 60 * 5,
+  });
+}

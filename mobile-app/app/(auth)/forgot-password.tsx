@@ -30,13 +30,17 @@ export default function ForgotPasswordScreen() {
 
   const onSubmit = async (data: ForgotPasswordInput) => {
     setError(null);
-    // No verification yet — just proceed to the verify-code screen.
     setIsLoading(true);
     try {
+      const { authService } = await import('@/services');
+      await authService.forgotPassword(data.email);
       router.push({
         pathname: '/(auth)/verify-code',
         params: { email: data.email },
       });
+    } catch (err: any) {
+      const message = err?.response?.data?.message ?? err?.message ?? 'Failed to send reset email';
+      setError(message);
     } finally {
       setIsLoading(false);
     }

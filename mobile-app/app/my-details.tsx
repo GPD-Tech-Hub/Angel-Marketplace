@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, useWindowDimensions, Modal, Platform } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, Pressable, TextInput, useWindowDimensions, Modal, Platform, ActivityIndicator } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { myDetailsScreenStyles as styles } from '@/styles/myDetailsScreen';
+import { useUserProfile, useUpdateProfile } from '@/queries';
 
 // Gender options
 const GENDER_OPTIONS = ['Male', 'Female', 'Other'];
@@ -20,13 +21,27 @@ export default function MyDetailsScreen() {
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
 
-  // Form state
-  const [fullName, setFullName] = useState<string>('Cody Fisher'); // Non-editable, mock data
-  const [email, setEmail] = useState<string>('cody.fisher45@example'); // Non-editable, mock data
+  const { data: profile, isLoading: profileLoading } = useUserProfile();
+  const updateProfile = useUpdateProfile();
+
+  // Form state (synced from API)
+  const [fullName, setFullName] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
   const [dateOfBirth, setDateOfBirth] = useState<string>('');
   const [gender, setGender] = useState<string>('');
   const [phoneNumber, setPhoneNumber] = useState<string>('');
   const [selectedCountryCode, setSelectedCountryCode] = useState(COUNTRY_CODES[0]);
+
+  useEffect(() => {
+    if (profile) {
+      setFullName([profile.firstName, profile.lastName].filter(Boolean).join(' ') || '');
+      setEmail(profile.email || '');
+      setDateOfBirth(profile.dateOfBirth || '');
+      setGender(profile.gender || '');
+      const phone = profile.phone || '';
+      setPhoneNumber(phone.replace(/^\+\d+\s*/, '').trim());
+    }
+  }, [profile]);
 
   // Dropdown states
   const [showGenderPicker, setShowGenderPicker] = useState<boolean>(false);
@@ -101,20 +116,23 @@ export default function MyDetailsScreen() {
                       gender.trim().length > 0 && 
                       phoneNumber.trim().length > 0;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!isFormValid) return;
-    
-    // TODO: Save user details to backend
-    console.log('Save details:', {
-      fullName,
-      email,
-      dateOfBirth,
-      gender,
-      phoneNumber: `${selectedCountryCode.code} ${phoneNumber}`,
-    });
-    
-    // Navigate back
-    router.back();
+    const names = fullName.trim().split(/\s+/);
+    const firstName = names[0] || '';
+    const lastName = names.slice(1).join(' ') || '';
+    try {
+      await updateProfile.mutateAsync({
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        phone: `${selectedCountryCode.code} ${phoneNumber}`.trim() || undefined,
+        dateOfBirth: dateOfBirth || undefined,
+        gender: gender || undefined,
+      });
+      router.back();
+    } catch (_err) {
+      // Error could be shown in UI
+    }
   };
 
   const handleSelectGender = (selectedGender: string) => {
@@ -126,6 +144,16 @@ export default function MyDetailsScreen() {
     setSelectedCountryCode(country);
     setShowCountryPicker(false);
   };
+
+  if (profileLoading && !profile) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color="#F43F5E" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>

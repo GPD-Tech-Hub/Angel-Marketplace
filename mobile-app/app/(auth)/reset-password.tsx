@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks';
@@ -8,12 +8,15 @@ import { FormButton, FormField } from '@/components/ui';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { resetPasswordSchema } from '@/utils/validation';
+import { authService } from '@/services';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ token?: string }>();
   const { horizontalPadding } = useResponsive();
   const insets = useSafeAreaInsets();
-  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const {
     control,
@@ -25,10 +28,22 @@ export default function ResetPasswordScreen() {
     defaultValues: { password: '', confirmPassword: '' },
   });
 
-  const onSubmit = () => {
-    // No backend yet — just go back to login for now.
-    setSubmitted(true);
-    router.push('/(auth)/login');
+  const onSubmit = async (data: { password: string; confirmPassword: string }) => {
+    setError(null);
+    const token = params.token;
+    if (!token) {
+      setError('Reset link invalid or expired. Please request a new one from the login screen.');
+      return;
+    }
+    setIsLoading(true);
+    try {
+      await authService.resetPassword(token, data.password);
+      router.replace('/(auth)/login');
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? err?.message ?? 'Failed to reset password');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -109,10 +124,16 @@ export default function ResetPasswordScreen() {
               paddingBottom: insets.bottom + 28,
             }}
           >
+            {error ? (
+              <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
+                <Text className="text-red-600 text-sm">{error}</Text>
+              </View>
+            ) : null}
             <FormButton
-              title="Send Code"
+              title={isLoading ? 'Resetting...' : 'Reset password'}
               onPress={handleSubmit(onSubmit)}
-              disabled={!isValid}
+              loading={isLoading}
+              disabled={!isValid || isLoading}
               variant="primary"
               backgroundColor={isValid ? '#F43F5E' : '#F3F4F6'}
               textColor={isValid ? '#FFFFFF' : '#000000'}

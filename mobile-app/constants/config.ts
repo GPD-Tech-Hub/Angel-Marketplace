@@ -1,22 +1,16 @@
+// Backend API base URL (no trailing slash). Override with EXPO_PUBLIC_API_URL in .env if needed.
+const DEFAULT_API_URL = 'http://ygkgc0o00cg4w4408k840og0.102.219.189.97.sslip.io/api';
+
 // Environment-based configuration
 const ENV = {
   development: {
-    API_URL: 'http://localhost:4000/api',
-    STRIPE_PUBLISHABLE_KEY: 'pk_test_your_stripe_key',
-    PAYSTACK_PUBLIC_KEY: 'pk_test_your_paystack_key',
-    FLUTTERWAVE_PUBLIC_KEY: 'FLWPUBK_TEST-your_flutterwave_key',
+    API_URL: (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) || DEFAULT_API_URL,
   },
   staging: {
-    API_URL: 'https://staging-api.angelmarketplace.com/api',
-    STRIPE_PUBLISHABLE_KEY: 'pk_test_your_stripe_key',
-    PAYSTACK_PUBLIC_KEY: 'pk_test_your_paystack_key',
-    FLUTTERWAVE_PUBLIC_KEY: 'FLWPUBK_TEST-your_flutterwave_key',
+    API_URL: (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) || 'https://staging-api.angelmarketplace.com/api',
   },
   production: {
-    API_URL: 'https://api.angelmarketplace.com/api',
-    STRIPE_PUBLISHABLE_KEY: 'pk_live_your_stripe_key',
-    PAYSTACK_PUBLIC_KEY: 'pk_live_your_paystack_key',
-    FLUTTERWAVE_PUBLIC_KEY: 'FLWPUBK-your_flutterwave_key',
+    API_URL: (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) || DEFAULT_API_URL,
   },
 };
 
@@ -25,7 +19,6 @@ const getEnvVars = () => {
   if (__DEV__) {
     return ENV.development;
   }
-  // You can add more sophisticated environment detection here
   return ENV.production;
 };
 
