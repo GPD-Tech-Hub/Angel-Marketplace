@@ -28,8 +28,8 @@ export const config = {
   APP_VERSION: '1.0.0',
   PAGINATION_LIMIT: 20,
   IMAGE_PLACEHOLDER: 'https://via.placeholder.com/300x300?text=No+Image',
-  CURRENCY: 'USD',
-  CURRENCY_SYMBOL: '$',
+  CURRENCY: 'GBP',
+  CURRENCY_SYMBOL: '£',
 };
 
 export default config;
