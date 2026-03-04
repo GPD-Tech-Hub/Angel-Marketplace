@@ -1,20 +1,21 @@
 import { StyleSheet } from 'react-native';
+import { colors } from '@/constants/colors';
 
 export const orderStatusTabsStyles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     backgroundColor: '#F3F4F6',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 4,
     marginHorizontal: 20,
-    marginTop: 16,
+    marginTop: 14,
     marginBottom: 16,
   },
   tabContainer: {
     flex: 1,
   },
   tab: {
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,
     alignItems: 'center',
@@ -22,13 +23,18 @@ export const orderStatusTabsStyles = StyleSheet.create({
   },
   tabActive: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   tabText: {
     fontWeight: '500',
-    color: '#111827',
+    color: '#6B7280',
   },
   tabTextActive: {
-    fontWeight: '600',
+    fontWeight: '700',
+    color: colors.brand,
   },
 });
