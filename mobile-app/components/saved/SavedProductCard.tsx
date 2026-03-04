@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { savedProductCardStyles as styles } from '@/styles/savedProductCard';
 import { Product } from '@/types';
+import { formatCurrency } from '@/utils';
 
 type Props = {
   product: Product;
@@ -84,11 +85,13 @@ export function SavedProductCard({ product, style, onPress, onFavoritePress, isF
           </Text>
 
           <View style={styles.metaRow}>
-            <Text style={styles.price}>${product.price}</Text>
-            <View style={styles.ratingWrap}>
-              <Ionicons name="star" size={starSize} color="#FBBF24" />
-              <Text style={styles.ratingText}>4.8</Text>
-            </View>
+            <Text style={styles.price}>{formatCurrency(product.price)}</Text>
+            {product.rating != null && product.rating > 0 && (
+              <View style={styles.ratingWrap}>
+                <Ionicons name="star" size={starSize} color="#FBBF24" />
+                <Text style={styles.ratingText}>{product.rating.toFixed(1)}</Text>
+              </View>
+            )}
           </View>
         </>
       )}

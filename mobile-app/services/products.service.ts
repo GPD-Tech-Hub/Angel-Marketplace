@@ -20,10 +20,11 @@ export const productsService = {
     params.append('limit', String(limit));
 
     if (filters?.categoryId) params.append('categoryId', filters.categoryId);
-    if (filters?.minPrice) params.append('minPrice', String(filters.minPrice));
-    if (filters?.maxPrice) params.append('maxPrice', String(filters.maxPrice));
+    if (filters?.minPrice !== undefined) params.append('minPrice', String(filters.minPrice));
+    if (filters?.maxPrice !== undefined) params.append('maxPrice', String(filters.maxPrice));
     if (filters?.search) params.append('search', filters.search);
     if (filters?.sortBy) params.append('sortBy', filters.sortBy);
+    if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
 
     const response = await api.get<ApiResponse<PaginatedProducts>>(
       `${ENDPOINTS.PRODUCTS.LIST}?${params.toString()}`

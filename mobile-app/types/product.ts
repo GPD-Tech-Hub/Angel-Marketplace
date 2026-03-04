@@ -50,7 +50,8 @@ export interface ProductFilters {
   minPrice?: number;
   maxPrice?: number;
   search?: string;
-  sortBy?: 'price_asc' | 'price_desc' | 'newest' | 'popular';
+  sortBy?: 'price' | 'name' | 'createdAt';
+  sortOrder?: 'asc' | 'desc';
 }
 
 export interface PaginatedProducts {
