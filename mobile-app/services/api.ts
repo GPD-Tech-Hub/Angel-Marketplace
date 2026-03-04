@@ -2,7 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { config } from '@/constants/config';
 import { ENDPOINTS } from '@/constants/endpoints';
 import { secureStorage, STORAGE_KEYS } from '@/utils/storage';
-import { useAuthStore } from '@/store';
+import { useAuthStore } from '@/store/authStore';
 
 // Create axios instance
 export const api = axios.create({

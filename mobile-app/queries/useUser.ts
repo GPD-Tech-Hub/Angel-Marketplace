@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { authService } from '@/services';
-import { useAuthStore } from '@/store';
+import { useAuthStore } from '@/store/authStore';
 import { UpdateProfileData } from '@/types';
 
 // Query keys
