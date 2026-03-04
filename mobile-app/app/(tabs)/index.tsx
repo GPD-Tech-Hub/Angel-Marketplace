@@ -1,6 +1,6 @@
 import { colors } from '@/constants/colors';
 import React, { useMemo, useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Linking } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -14,7 +14,8 @@ import { TrendingSection } from '@/components/home/TrendingSection';
 import type { TrendingProduct } from '@/components/home/TrendingProductCard';
 import { Product } from '@/types';
 import { useCategories } from '@/queries/useCategories';
-import { useTrendingProducts, useAds } from '@/queries/useProducts';
+import { useTrendingProducts } from '@/queries/useProducts';
+import { useAds } from '@/queries/useAds';
 import { config } from '@/constants/config';
 
 const FALLBACK_CATEGORY_IMAGE = require('../../assets/image/image 5.png');
@@ -28,7 +29,7 @@ export default function HomeScreen() {
 
   const { data: categories = [], isLoading: categoriesLoading, refetch: refetchCategories } = useCategories();
   const { data: trendingProducts = [], isLoading: trendingLoading, refetch: refetchTrending } = useTrendingProducts(10);
-  const { data: ads = [], refetch: refetchAds } = useAds(1);
+  const { data: ads = [], refetch: refetchAds } = useAds();
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -62,54 +63,27 @@ export default function HomeScreen() {
     }));
   }, [trendingProducts]);
 
-  const primaryAd = ads[0];
-  const bannerSource = primaryAd?.image
-    ? { uri: primaryAd.image }
-    : require('../../assets/image/Frame 45.png');
-
-  const onBannerPress = useCallback(async () => {
-    if (!primaryAd) return;
-
-    if (primaryAd.destinationType === 'product' && primaryAd.productId) {
-      router.push({ pathname: '/product-details', params: { productId: primaryAd.productId } } as any);
-      return;
-    }
-
-    if (primaryAd.destinationType === 'category') {
-      if (primaryAd.categorySlug) {
-        router.push({ pathname: '/(tabs)/categories', params: { slug: primaryAd.categorySlug } } as any);
-      } else {
-        router.push('/(tabs)/categories');
-      }
-      return;
-    }
-
-    if (primaryAd.customUrl) {
-      const canOpen = await Linking.canOpenURL(primaryAd.customUrl);
-      if (canOpen) await Linking.openURL(primaryAd.customUrl);
-    }
-  }, [primaryAd, router]);
-
   return (
     <SafeAreaView style={styles.screen}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.brand}
+            colors={[colors.brand]}
+          />
         }
       >
-        {/* Top section (Discover) */}
         <View style={[styles.container, { paddingHorizontal: horizontalPadding }]}>
           {/* Title + bell */}
           <View style={styles.titleRow}>
             <Text style={styles.title}>Discover</Text>
-
             <Pressable
               style={styles.iconButton}
-              onPress={() => {
-                router.push('/notifications' as any);
-              }}
+              onPress={() => router.push('/notifications' as any)}
             >
               {({ pressed }) => (
                 <Image
@@ -122,9 +96,7 @@ export default function HomeScreen() {
           </View>
 
           <DiscoverSearchBar
-            onFilterPress={() => {
-              // TODO: filters
-            }}
+            onFilterPress={() => {/* TODO: filters */}}
           />
 
           <CategoriesRow
@@ -137,50 +109,46 @@ export default function HomeScreen() {
             }}
           />
 
-          <HomeBanner
-            source={bannerSource}
-            onPress={onBannerPress}
-          />
+          {/* Ad banner — fetched from API, falls back to nothing while loading */}
+          <HomeBanner ads={ads} />
 
           {trendingLoading ? (
             <View style={{ paddingVertical: 24, alignItems: 'center' }}>
               <ActivityIndicator size="small" color={colors.brand} />
             </View>
           ) : (
-          <TrendingSection
-            items={trendingItems}
-            horizontalPadding={horizontalPadding}
-            onViewAllPress={() => router.push('/(tabs)/categories')}
-            onItemPress={(item) => {
-              const product = trendingProducts.find((p) => p.id === item.id);
-              if (product?.slug) {
-                router.push({ pathname: '/product/[slug]', params: { slug: product.slug } } as any);
-              } else {
-                router.push({ pathname: '/product-details', params: { productId: item.id } } as any);
-              }
-            }}
-            onFavoritePress={(item) => {
-              const product = trendingProducts.find((p) => p.id === item.id);
-              const forStore: Product = product
-                ? { ...product, slug: product.slug || item.id }
-                : {
-                    id: item.id,
-                    name: item.name,
-                    slug: item.id.toLowerCase().replace(/\s+/g, '-'),
-                    description: '',
-                    price: item.price,
-                    images: [],
-                    stock: 0,
-                    categoryId: '',
-                    createdAt: new Date().toISOString(),
-                  };
-              if (toggleFavorite) toggleFavorite(forStore);
-            }}
-          />
+            <TrendingSection
+              items={trendingItems}
+              horizontalPadding={horizontalPadding}
+              onViewAllPress={() => router.push('/(tabs)/categories')}
+              onItemPress={(item) => {
+                const product = trendingProducts.find((p) => p.id === item.id);
+                if (product?.slug) {
+                  router.push({ pathname: '/product/[slug]', params: { slug: product.slug } } as any);
+                } else {
+                  router.push({ pathname: '/product-details', params: { productId: item.id } } as any);
+                }
+              }}
+              onFavoritePress={(item) => {
+                const product = trendingProducts.find((p) => p.id === item.id);
+                const forStore: Product = product
+                  ? { ...product, slug: product.slug || item.id }
+                  : {
+                      id: item.id,
+                      name: item.name,
+                      slug: item.id.toLowerCase().replace(/\s+/g, '-'),
+                      description: '',
+                      price: item.price,
+                      images: [],
+                      stock: 0,
+                      categoryId: '',
+                      createdAt: new Date().toISOString(),
+                    };
+                if (toggleFavorite) toggleFavorite(forStore);
+              }}
+            />
           )}
         </View>
-
-        {/* Next: Categories row, banner, trending, etc. */}
       </ScrollView>
     </SafeAreaView>
   );
