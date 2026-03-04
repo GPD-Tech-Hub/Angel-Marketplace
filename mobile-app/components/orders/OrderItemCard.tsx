@@ -4,27 +4,35 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { formatCurrency } from '@/utils';
 import { colors } from '@/constants/colors';
+import { config } from '@/constants/config';
 
-// ── Status pill config ────────────────────────────────────────────────────────
+// ── Status config ─────────────────────────────────────────────────────────────
 
-const STATUS_STYLE: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING:    { label: 'Pending',    color: '#92400E', bg: '#FFFBEB' },
-  CONFIRMED:  { label: 'Confirmed',  color: '#1D4ED8', bg: '#EFF6FF' },
-  PROCESSING: { label: 'Processing', color: '#6D28D9', bg: '#F5F3FF' },
-  SHIPPED:    { label: 'Shipped',    color: '#0369A1', bg: '#F0F9FF' },
-  DELIVERED:  { label: 'Delivered',  color: '#166534', bg: '#F0FDF4' },
-  CANCELLED:  { label: 'Cancelled',  color: '#991B1B', bg: '#FEF2F2' },
+const STATUS_STYLE: Record<string, { label: string; color: string; bg: string; dot: string }> = {
+  PENDING:    { label: 'Pending',    color: '#92400E', bg: '#FFFBEB', dot: '#F59E0B' },
+  CONFIRMED:  { label: 'Confirmed',  color: '#1E40AF', bg: '#EFF6FF', dot: '#3B82F6' },
+  PROCESSING: { label: 'Processing', color: '#5B21B6', bg: '#F5F3FF', dot: '#8B5CF6' },
+  SHIPPED:    { label: 'Shipped',    color: '#075985', bg: '#F0F9FF', dot: '#0EA5E9' },
+  DELIVERED:  { label: 'Delivered',  color: '#14532D', bg: '#F0FDF4', dot: '#22C55E' },
+  CANCELLED:  { label: 'Cancelled',  color: '#7F1D1D', bg: '#FEF2F2', dot: '#EF4444' },
 };
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface OrderItemCardProps {
   id: string;
+  // order-level fields
+  orderId: string;
+  orderNumber?: string;
+  createdAt?: string;
+  itemCount?: number;
+  // item-level fields (first/representative item)
   productName: string;
   size: string;
-  price: number;
+  price: number;          // order total
   status: string;
-  image: any;
+  image: any;             // first item image
+  images?: any[];         // all item images for strip
   isCompleted?: boolean;
   rating?: number;
   onPress?: () => void;
@@ -35,72 +43,122 @@ interface OrderItemCardProps {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function OrderItemCard({
+  orderNumber,
+  createdAt,
+  itemCount = 1,
   productName,
-  size,
   price,
   status,
   image,
+  images,
   isCompleted = false,
   rating,
   onPress,
   onTrackOrder,
   onLeaveReview,
 }: OrderItemCardProps) {
-  const statusKey = status?.toUpperCase() ?? '';
-  const statusMeta = STATUS_STYLE[statusKey] ?? { label: status, color: '#374151', bg: '#F3F4F6' };
+  const statusKey  = status?.toUpperCase() ?? '';
+  const meta       = STATUS_STYLE[statusKey] ?? { label: status, color: '#374151', bg: '#F3F4F6', dot: '#9CA3AF' };
+  const displayDate = createdAt ? formatDate(createdAt) : '';
+
+  // Build thumbnail list — up to 4
+  const thumbs: any[] = images?.slice(0, 4) ?? [image];
 
   return (
-    <Pressable style={({ pressed }) => [s.card, { opacity: pressed ? 0.95 : 1 }]} onPress={onPress ?? onTrackOrder}>
-      {/* Image */}
-      <Image source={image} style={s.image} contentFit="cover" />
+    <Pressable
+      style={({ pressed }) => [s.card, pressed && s.cardPressed]}
+      onPress={onPress ?? onTrackOrder}
+      android_ripple={{ color: '#F3F4F6' }}
+    >
+      {/* ── Top row: order number + status pill ── */}
+      <View style={s.topRow}>
+        <View style={s.orderMeta}>
+          <Text style={s.orderNumber}>{orderNumber ?? 'Order'}</Text>
+          {displayDate ? <Text style={s.orderDate}>{displayDate}</Text> : null}
+        </View>
+        <View style={[s.pill, { backgroundColor: meta.bg }]}>
+          <View style={[s.pillDot, { backgroundColor: meta.dot }]} />
+          <Text style={[s.pillText, { color: meta.color }]}>{meta.label}</Text>
+        </View>
+      </View>
 
-      {/* Details */}
-      <View style={s.details}>
+      {/* ── Divider ── */}
+      <View style={s.divider} />
 
-        {/* Name + status pill */}
-        <View style={s.nameRow}>
-          <Text style={s.name} numberOfLines={2}>{productName}</Text>
-          <View style={[s.pill, { backgroundColor: statusMeta.bg }]}>
-            <Text style={[s.pillText, { color: statusMeta.color }]}>{statusMeta.label}</Text>
-          </View>
+      {/* ── Middle row: thumbnails + product info ── */}
+      <View style={s.middleRow}>
+        {/* Thumbnail strip */}
+        <View style={s.thumbsWrap}>
+          {thumbs.map((src, i) => (
+            <Image
+              key={i}
+              source={src}
+              style={[
+                s.thumb,
+                i > 0 && { marginLeft: -12 },
+                { zIndex: thumbs.length - i },
+              ]}
+              contentFit="cover"
+              cachePolicy="memory-disk"
+            />
+          ))}
+          {itemCount > 4 && (
+            <View style={[s.thumbMore, { marginLeft: -12, zIndex: 0 }]}>
+              <Text style={s.thumbMoreText}>+{itemCount - 4}</Text>
+            </View>
+          )}
         </View>
 
-        {/* Size — only if meaningful */}
-        {size && size !== '-' && (
-          <Text style={s.meta}>Size: {size}</Text>
-        )}
+        {/* Name + item count */}
+        <View style={s.productInfo}>
+          <Text style={s.productName} numberOfLines={2}>
+            {productName}
+          </Text>
+          {itemCount > 1 && (
+            <Text style={s.itemCount}>+{itemCount - 1} more item{itemCount - 1 !== 1 ? 's' : ''}</Text>
+          )}
+        </View>
+      </View>
 
-        {/* Price + action */}
-        <View style={s.footer}>
-          <Text style={s.price}>{formatCurrency(price)}</Text>
+      {/* ── Bottom row: total + action buttons ── */}
+      <View style={s.bottomRow}>
+        <View>
+          <Text style={s.totalLabel}>Total</Text>
+          <Text style={s.totalValue}>{formatCurrency(price)}</Text>
+        </View>
 
+        <View style={s.actions}>
           {isCompleted ? (
-            <View style={s.completedActions}>
-              {rating ? (
-                <View style={s.ratingRow}>
-                  <Ionicons name="star" size={14} color="#FBBF24" />
-                  <Text style={s.ratingText}>{rating.toFixed(1)}</Text>
+            <>
+              {rating != null ? (
+                <View style={s.ratingBadge}>
+                  <Ionicons name="star" size={13} color="#F59E0B" />
+                  <Text style={s.ratingText}>{Number(rating).toFixed(1)}</Text>
                 </View>
               ) : (
                 <Pressable
-                  style={({ pressed }) => [s.btn, s.btnOutline, { opacity: pressed ? 0.7 : 1 }]}
-                  onPress={onLeaveReview}
+                  style={({ pressed }) => [s.btnOutline, { opacity: pressed ? 0.7 : 1 }]}
+                  onPress={(e) => { e.stopPropagation?.(); onLeaveReview?.(); }}
+                  hitSlop={6}
                 >
-                  <Text style={s.btnOutlineText}>Leave Review</Text>
+                  <Ionicons name="star-outline" size={13} color={colors.brand} style={{ marginRight: 4 }} />
+                  <Text style={s.btnOutlineText}>Review</Text>
                 </Pressable>
               )}
               <Pressable
-                style={({ pressed }) => [s.btn, s.btnFill, { opacity: pressed ? 0.8 : 1 }]}
-                onPress={onTrackOrder ?? onPress}
+                style={({ pressed }) => [s.btnFill, { opacity: pressed ? 0.8 : 1 }]}
+                onPress={(e) => { e.stopPropagation?.(); (onTrackOrder ?? onPress)?.(); }}
+                hitSlop={6}
               >
                 <Ionicons name="locate-outline" size={13} color="#fff" style={{ marginRight: 4 }} />
                 <Text style={s.btnFillText}>Track</Text>
               </Pressable>
-            </View>
+            </>
           ) : (
             <Pressable
-              style={({ pressed }) => [s.btn, s.btnFill, { opacity: pressed ? 0.8 : 1 }]}
-              onPress={onTrackOrder ?? onPress}
+              style={({ pressed }) => [s.btnFill, { opacity: pressed ? 0.8 : 1 }]}
+              onPress={(e) => { e.stopPropagation?.(); (onTrackOrder ?? onPress)?.(); }}
+              hitSlop={6}
             >
               <Ionicons name="locate-outline" size={13} color="#fff" style={{ marginRight: 4 }} />
               <Text style={s.btnFillText}>Track Order</Text>
@@ -112,112 +170,199 @@ export function OrderItemCard({
   );
 }
 
+// ── Date formatter ────────────────────────────────────────────────────────────
+
+function formatDate(iso: string): string {
+  try {
+    return new Date(iso).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  } catch {
+    return '';
+  }
+}
+
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
   card: {
-    flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
+    borderRadius: 16,
+    padding: 14,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  image: {
-    width: 76,
-    height: 76,
-    borderRadius: 10,
-    backgroundColor: '#F3F4F6',
+  cardPressed: {
+    backgroundColor: '#FAFAFA',
   },
-  details: {
-    flex: 1,
-    marginLeft: 12,
-    justifyContent: 'space-between',
-  },
-  nameRow: {
+
+  // Top row
+  topRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 8,
-    marginBottom: 4,
+    marginBottom: 12,
   },
-  name: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
+  orderMeta: { flex: 1, marginRight: 8 },
+  orderNumber: {
+    fontSize: 13,
+    fontWeight: '700',
     color: '#111827',
-    lineHeight: 19,
+    letterSpacing: 0.2,
   },
+  orderDate: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+
+  // Status pill
   pill: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 20,
+    gap: 5,
     flexShrink: 0,
+  },
+  pillDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   pillText: {
     fontSize: 11,
     fontWeight: '700',
   },
-  meta: {
+
+  // Divider
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginBottom: 12,
+  },
+
+  // Middle row
+  middleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    gap: 12,
+  },
+  thumbsWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  thumb: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 2,
+    borderColor: '#fff',
+  },
+  thumbMore: {
+    width: 52,
+    height: 52,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 2,
+    borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  thumbMoreText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+    lineHeight: 20,
+  },
+  itemCount: {
     fontSize: 12,
     color: '#9CA3AF',
-    marginBottom: 6,
+    marginTop: 3,
   },
-  footer: {
+
+  // Bottom row
+  bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
   },
-  price: {
-    fontSize: 16,
-    fontWeight: '700',
+  totalLabel: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+    marginBottom: 2,
+  },
+  totalValue: {
+    fontSize: 17,
+    fontWeight: '800',
     color: '#111827',
   },
-  // Buttons
-  btn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 8,
-    paddingVertical: 7,
-    paddingHorizontal: 12,
-  },
-  btnFill: {
-    backgroundColor: colors.brand,
-  },
-  btnFillText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  btnOutline: {
-    borderWidth: 1.5,
-    borderColor: colors.brand,
-    backgroundColor: 'transparent',
-  },
-  btnOutlineText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.brand,
-  },
-  // Completed tab actions row
-  completedActions: {
+  actions: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  // Rating
-  ratingRow: {
+
+  // Buttons
+  btnFill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.brand,
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+  },
+  btnFillText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  btnOutline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: colors.brand,
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+  },
+  btnOutlineText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.brand,
+  },
+
+  // Rating badge
+  ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#FFFBEB',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
+    borderRadius: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
   },
   ratingText: {
     fontSize: 13,

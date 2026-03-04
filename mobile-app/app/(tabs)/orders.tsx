@@ -11,16 +11,13 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import { OrderItemCard } from '@/components/orders/OrderItemCard';
 import { LeaveReviewModal } from '@/components/orders/LeaveReviewModal';
 import { useOrders, useLeaveReview } from '@/queries';
 import { useAuthStore } from '@/store';
 import { config } from '@/constants/config';
 import { colors } from '@/constants/colors';
-import { formatCurrency } from '@/utils';
-import { useRouter as useExpoRouter } from 'expo-router';
-import type { Order, OrderItem } from '@/types';
+import type { Order } from '@/types';
 
 type TabId = 'ongoing' | 'completed';
 
@@ -29,25 +26,32 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'completed', label: 'Completed' },
 ];
 
-function orderItemToCard(
-  order: Order & { reviews?: { rating: number }[] },
-  item: OrderItem,
-  index: number,
-) {
-  const imageUri = item.product?.images?.[0] || config.IMAGE_PLACEHOLDER;
-  const rating = order.reviews?.[0]?.rating;
+function orderToCard(order: Order & { reviews?: { rating: number }[] }) {
+  const items     = order.items ?? [];
+  const firstItem = items[0];
+  const rating    = order.reviews?.[0]?.rating;
+
+  // Collect one image per item for the thumbnail strip
+  const images = items.map((item) => {
+    const uri = item.product?.images?.[0] || config.IMAGE_PLACEHOLDER;
+    return { uri };
+  });
+
+  const firstImageUri = firstItem?.product?.images?.[0] || config.IMAGE_PLACEHOLDER;
+
   return {
-    id:          `${order.id}-${item.id}-${index}`,
+    id:          order.id,
     orderId:     order.id,
-    productName: item.product?.name ?? 'Product',
-    size:        (item as any).size ?? '-',
-    price:       item.price * item.quantity,
-    status:      order.status,
-    image:       typeof imageUri === 'string' ? { uri: imageUri } : imageUri,
-    rating:      rating != null ? Number(rating) : undefined,
     orderNumber: (order as any).orderNumber ?? `#${order.id.slice(-8).toUpperCase()}`,
     createdAt:   (order as any).createdAt ?? '',
-    itemCount:   (order.items ?? []).length,
+    itemCount:   items.length,
+    productName: firstItem?.product?.name ?? 'Order',
+    size:        '-',
+    price:       (order as any).total ?? items.reduce((s, i) => s + i.price * i.quantity, 0),
+    status:      order.status,
+    image:       { uri: firstImageUri },
+    images,
+    rating:      rating != null ? Number(rating) : undefined,
   };
 }
 
@@ -71,11 +75,7 @@ export default function OrdersScreen() {
 
   const cards = useMemo(() => {
     const list = activeTab === 'ongoing' ? ongoing : completed;
-    return list.flatMap((order) =>
-      (order.items ?? []).map((item, i) =>
-        orderItemToCard(order as Order & { reviews?: { rating: number }[] }, item, i)
-      )
-    );
+    return list.map((order) => orderToCard(order as Order & { reviews?: { rating: number }[] }));
   }, [activeTab, ongoing, completed]);
 
   const onRefresh = useCallback(async () => {
@@ -183,13 +183,17 @@ export default function OrdersScreen() {
           }
           renderItem={({ item: card }) => (
             <OrderItemCard
-              key={card.id}
               id={card.id}
+              orderId={card.orderId}
+              orderNumber={card.orderNumber}
+              createdAt={card.createdAt}
+              itemCount={card.itemCount}
               productName={card.productName}
               size={card.size}
               price={card.price}
               status={card.status}
               image={card.image}
+              images={card.images}
               isCompleted={activeTab === 'completed'}
               rating={card.rating}
               onPress={() => handleTrackOrder(card.orderId)}
@@ -216,7 +220,7 @@ export default function OrdersScreen() {
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function Header() {
-  const router = useExpoRouter();
+  const router = useRouter();
   return (
     <View style={s.header}>
       <Pressable onPress={() => router.back()} style={s.backBtn} hitSlop={10}>

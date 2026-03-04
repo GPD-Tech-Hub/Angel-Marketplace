@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, FlatList, useWindowDimensions } from 'react-native';
+import { View, FlatList, useWindowDimensions, RefreshControl } from 'react-native';
 import { Product } from '@/types';
 import { SavedProductCard } from './SavedProductCard';
 import { savedItemsGridStyles as styles } from '@/styles/savedItemsGrid';
@@ -10,6 +10,8 @@ type Props = {
   onItemPress?: (product: Product) => void;
   onFavoritePress?: (product: Product) => void;
   isFavorite: (productId: string) => boolean;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 };
 
 export function SavedItemsGrid({
@@ -18,6 +20,8 @@ export function SavedItemsGrid({
   onItemPress,
   onFavoritePress,
   isFavorite,
+  refreshing,
+  onRefresh,
 }: Props) {
   const { width } = useWindowDimensions();
   const gap = 12;
@@ -32,6 +36,16 @@ export function SavedItemsGrid({
       columnWrapperStyle={{ justifyContent: 'flex-start', paddingHorizontal: horizontalPadding }}
       contentContainerStyle={styles.listContent}
       style={styles.container}
+      refreshControl={
+        onRefresh ? (
+          <RefreshControl
+            refreshing={refreshing ?? false}
+            onRefresh={onRefresh}
+            tintColor="#F43F5E"
+            colors={['#F43F5E']}
+          />
+        ) : undefined
+      }
       renderItem={({ item, index }) => (
         <SavedProductCard
           product={item}

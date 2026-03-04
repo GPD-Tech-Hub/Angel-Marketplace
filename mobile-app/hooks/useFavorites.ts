@@ -13,7 +13,7 @@ export function useFavorites() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   // API hooks (only active when authenticated)
-  const { data: apiFavoritesRaw } = useFavoritesQuery({ enabled: isAuthenticated });
+  const { data: apiFavoritesRaw, refetch: refetchFavorites } = useFavoritesQuery({ enabled: isAuthenticated });
   const apiFavorites = Array.isArray(apiFavoritesRaw) ? apiFavoritesRaw : [];
   const addFavMutation = useAddFavorite();
   const removeFavMutation = useRemoveFavorite();
