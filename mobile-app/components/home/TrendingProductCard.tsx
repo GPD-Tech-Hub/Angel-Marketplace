@@ -10,7 +10,7 @@ import Animated, {
   Easing,
 } from 'react-native-reanimated';
 import { trendingProductCardStyles as styles } from '@/styles/trendingProductCard';
-import { useFavoritesStore } from '@/store';
+import { useFavorites } from '@/hooks/useFavorites';
 import { formatCurrency } from '@/utils';
 
 export type TrendingProduct = {
@@ -32,7 +32,8 @@ export function TrendingProductCard({ item, style, onPress, onFavoritePress }: P
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
   const starSize = Math.round(13 * scale);
-  const isFavorite = useFavoritesStore((state) => state.isFavorite(item.id));
+  const { isFavorite: checkFavorite } = useFavorites();
+  const isFavorite = checkFavorite(item.id);
   const favScale = useSharedValue(1);
   const favAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: favScale.value }],

@@ -4,8 +4,7 @@ import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { useResponsive } from '@/hooks';
-import { useFavoritesStore } from '@/store';
+import { useResponsive, useFavorites } from '@/hooks';
 import { homeTopSectionStyles as styles } from '@/styles/homeTopSection';
 import { DiscoverSearchBar } from '@/components/layout/DiscoverSearchBar';
 import { CategoriesRow, type CategoryItem } from '@/components/home/CategoriesRow';
@@ -23,7 +22,7 @@ import { NewsletterCard } from '@/components/home/NewsletterCard';
 export default function HomeScreen() {
   const router = useRouter();
   const { horizontalPadding } = useResponsive();
-  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
+  const { toggleFavorite } = useFavorites();
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -89,9 +88,14 @@ export default function HomeScreen() {
             </Pressable>
           </View>
 
-          <DiscoverSearchBar
-            onFilterPress={() => {/* TODO: filters */}}
-          />
+          {/* Tapping the bar or filter icon both go to Shop — home has no local search */}
+          <Pressable onPress={() => router.push('/(tabs)/shop' as any)}>
+            <DiscoverSearchBar
+              placeholder="Search products…"
+              onFilterPress={() => router.push('/(tabs)/shop' as any)}
+              containerStyle={{ pointerEvents: 'none' }}
+            />
+          </Pressable>
 
           {categoryItems.length > 0 && (
             <CategoriesRow
