@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { useProducts, useProductSearch, useCategories } from '@/queries';
 import { DiscoverSearchBar } from '@/components/layout/DiscoverSearchBar';
 import { ProductGrid } from '@/components/products';
@@ -55,9 +56,9 @@ export default function ShopScreen() {
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(paramCategoryId ?? null);
   const [refreshing, setRefreshing]             = useState(false);
 
-  // When navigated to with a categoryId param, apply it
+  // Sync category filter whenever the param changes (including cleared to undefined)
   useEffect(() => {
-    if (paramCategoryId) setActiveCategoryId(paramCategoryId);
+    setActiveCategoryId(paramCategoryId ?? null);
   }, [paramCategoryId]);
 
   const [filterVisible, setFilterVisible]   = useState(false);
@@ -180,6 +181,7 @@ export default function ShopScreen() {
           onChangeText={handleSearch}
           onSubmit={handleSearchSubmit}
           onFilterPress={openFilter}
+          hasActiveFilter={hasActiveFilters}
         />
       </View>
 
