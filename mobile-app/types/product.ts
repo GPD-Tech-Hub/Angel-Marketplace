@@ -17,6 +17,8 @@ export interface Product {
   slug: string;
   description: string;
   price: number;
+  /** Per-currency prices map returned by the backend, e.g. { GBP: 9.99, USD: 12.50 } */
+  prices?: Record<string, number>;
   comparePrice?: number;
   images: string[];
   stock: number;

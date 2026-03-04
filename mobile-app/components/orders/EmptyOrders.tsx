@@ -39,7 +39,7 @@ export function EmptyOrders({ status }: EmptyOrdersProps) {
       </Text>
       {status === 'ongoing' && (
         <Pressable
-          onPress={() => router.push('/(tabs)' as any)}
+          onPress={() => router.push('/(tabs)/shop' as any)}
           style={{ marginTop: 20, backgroundColor: colors.brand, paddingHorizontal: 28, paddingVertical: 13, borderRadius: 14 }}
         >
           <Text style={{ color: '#fff', fontWeight: '700', fontSize: Math.round(15 * scale) }}>Start Shopping</Text>

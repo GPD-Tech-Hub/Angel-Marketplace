@@ -37,6 +37,7 @@ export interface Order {
   subtotal: number;
   shipping: number;
   total: number;
+  currencyCode: string;
   shippingAddress: ShippingAddress;
   paymentMethod: string;
   paymentId?: string;
@@ -47,8 +48,9 @@ export interface Order {
 
 export interface CreateOrderPayload {
   shippingAddress: ShippingAddress;
-  paymentMethod: 'stripe' | 'paystack' | 'flutterwave';
+  paymentMethod: 'stripe' | 'paystack' | 'flutterwave' | 'bank_transfer';
   couponCode?: string;
+  currencyCode?: string;
 }
 
 export interface OrderStatusUpdate {

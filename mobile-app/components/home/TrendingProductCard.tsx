@@ -11,12 +11,14 @@ import Animated, {
 } from 'react-native-reanimated';
 import { trendingProductCardStyles as styles } from '@/styles/trendingProductCard';
 import { useFavorites } from '@/hooks/useFavorites';
-import { formatCurrency } from '@/utils';
+import { formatCurrency, resolvePrice } from '@/utils';
+import { useCurrencyStore } from '@/store/currencyStore';
 
 export type TrendingProduct = {
   id: string;
   name: string;
   price: number;
+  prices?: Record<string, number>;
   rating: number;
   image: any;
 };
@@ -34,6 +36,8 @@ export function TrendingProductCard({ item, style, onPress, onFavoritePress }: P
   const starSize = Math.round(13 * scale);
   const { isFavorite: checkFavorite } = useFavorites();
   const isFavorite = checkFavorite(item.id);
+  const { currency } = useCurrencyStore();
+  const displayPrice = resolvePrice(item.prices, item.price, currency.code);
   const favScale = useSharedValue(1);
   const favAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: favScale.value }],
@@ -91,7 +95,7 @@ export function TrendingProductCard({ item, style, onPress, onFavoritePress }: P
           </Text>
 
           <View style={styles.metaRow}>
-            <Text style={styles.price}>{formatCurrency(item.price)}</Text>
+            <Text style={styles.price}>{formatCurrency(displayPrice, currency.code)}</Text>
             <View style={styles.ratingWrap}>
               <Ionicons name="star" size={starSize} color="#FBBF24" />
               <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>

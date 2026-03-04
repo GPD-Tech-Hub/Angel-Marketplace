@@ -11,7 +11,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { savedProductCardStyles as styles } from '@/styles/savedProductCard';
 import { Product } from '@/types';
-import { formatCurrency } from '@/utils';
+import { formatCurrency, resolvePrice } from '@/utils';
+import { useCurrencyStore } from '@/store/currencyStore';
 
 type Props = {
   product: Product;
@@ -24,6 +25,8 @@ type Props = {
 export function SavedProductCard({ product, style, onPress, onFavoritePress, isFavorite }: Props) {
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
+  const { currency } = useCurrencyStore();
+  const displayPrice = resolvePrice(product.prices, product.price, currency.code);
   const starSize = Math.round(13 * scale);
   const favScale = useSharedValue(1);
   const favAnimatedStyle = useAnimatedStyle(() => ({
@@ -85,7 +88,7 @@ export function SavedProductCard({ product, style, onPress, onFavoritePress, isF
           </Text>
 
           <View style={styles.metaRow}>
-            <Text style={styles.price}>{formatCurrency(product.price)}</Text>
+            <Text style={styles.price}>{formatCurrency(displayPrice, currency.code)}</Text>
             {product.rating != null && product.rating > 0 && (
               <View style={styles.ratingWrap}>
                 <Ionicons name="star" size={starSize} color="#FBBF24" />

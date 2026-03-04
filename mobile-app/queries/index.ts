@@ -8,3 +8,4 @@ export * from './useStripeConfig';
 export * from './useCart';
 export * from './useAds';
 export * from './useFavorites';
+export * from './usePaymentMethods';

@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, Pressable, useWindowDimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, ScrollView, Pressable, useWindowDimensions, Modal, FlatList, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,10 +8,14 @@ import { useAuth } from '@/hooks';
 import { useUnreadNotificationCount } from '@/queries';
 import { NumberBadge } from '@/components/ui/Badge';
 import { profileScreenStyles as styles } from '@/styles/profileScreen';
+import { useCurrencyStore, CURRENCIES } from '@/store/currencyStore';
+import { colors } from '@/constants/colors';
 
 interface MenuItem {
-  icon: any; // require() path for image
+  icon?: any; // require() path for image
+  ionicon?: React.ComponentProps<typeof Ionicons>['name'];
   label: string;
+  badge?: string;  // small text badge (e.g. currency code)
   onPress: () => void;
   isLogout?: boolean;
   showSeparator?: boolean;
@@ -24,6 +28,8 @@ export default function ProfileScreen() {
   const { isAuthenticated, logout } = useAuth();
   const { data: unreadData } = useUnreadNotificationCount({ enabled: isAuthenticated });
   const unreadCount = unreadData?.unreadCount ?? 0;
+  const { currency, setCurrency } = useCurrencyStore();
+  const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
 
   const menuItems: MenuItem[] = [
     {
@@ -61,6 +67,12 @@ export default function ProfileScreen() {
       onPress: () => {
         router.push('/notifications');
       },
+    },
+    {
+      ionicon: 'globe-outline',
+      label: 'Currency',
+      badge: currency.code,
+      onPress: () => setShowCurrencyPicker(true),
       showSeparator: true,
     },
     {
@@ -129,24 +141,30 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Menu Items */}
-        {menuItems.map((item, index) => (
+        {menuItems.map((item) => (
           <React.Fragment key={item.label}>
-            <Pressable
-              style={styles.menuItem}
-              onPress={item.onPress}
-            >
+            <Pressable style={styles.menuItem} onPress={item.onPress}>
               {({ pressed }) => (
                 <View style={[styles.menuItemInner, { opacity: pressed ? 0.7 : 1 }]}>
-                  <Image
-                    source={item.icon}
-                    style={[
-                      styles.menuItemIcon,
-                      item.isLogout && styles.menuItemIconLogout,
-                      { width: Math.round(24 * scale), height: Math.round(24 * scale) },
-                    ]}
-                    contentFit="contain"
-                    tintColor={item.isLogout ? '#EF4444' : undefined}
-                  />
+                  {item.ionicon ? (
+                    <Ionicons
+                      name={item.ionicon}
+                      size={Math.round(24 * scale)}
+                      color="#374151"
+                      style={[styles.menuItemIcon, { width: Math.round(24 * scale), height: Math.round(24 * scale) }]}
+                    />
+                  ) : (
+                    <Image
+                      source={item.icon}
+                      style={[
+                        styles.menuItemIcon,
+                        item.isLogout && styles.menuItemIconLogout,
+                        { width: Math.round(24 * scale), height: Math.round(24 * scale) },
+                      ]}
+                      contentFit="contain"
+                      tintColor={item.isLogout ? '#EF4444' : undefined}
+                    />
+                  )}
                   <Text
                     style={[
                       styles.menuItemText,
@@ -161,6 +179,11 @@ export default function ProfileScreen() {
                       <NumberBadge count={unreadCount} size="sm" />
                     </View>
                   )}
+                  {item.badge && (
+                    <View style={cm.badge}>
+                      <Text style={cm.badgeText}>{item.badge}</Text>
+                    </View>
+                  )}
                   <Ionicons
                     name="chevron-forward"
                     size={20}
@@ -169,12 +192,76 @@ export default function ProfileScreen() {
                 </View>
               )}
             </Pressable>
-            {item.showSeparator && (
-              <View style={styles.separator} />
-            )}
+            {item.showSeparator && <View style={styles.separator} />}
           </React.Fragment>
         ))}
       </ScrollView>
+
+      {/* Currency Picker Modal */}
+      <Modal
+        visible={showCurrencyPicker}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowCurrencyPicker(false)}
+      >
+        <SafeAreaView style={cm.modal} edges={['top', 'bottom']}>
+          <View style={cm.modalHeader}>
+            <Text style={cm.modalTitle}>Select Currency</Text>
+            <Pressable onPress={() => setShowCurrencyPicker(false)} hitSlop={10} style={cm.closeBtn}>
+              <Ionicons name="close" size={22} color="#111827" />
+            </Pressable>
+          </View>
+          <FlatList
+            data={CURRENCIES}
+            keyExtractor={(item) => item.code}
+            renderItem={({ item }) => {
+              const selected = item.code === currency.code;
+              return (
+                <Pressable
+                  style={[cm.currencyRow, selected && cm.currencyRowActive]}
+                  onPress={() => { setCurrency(item); setShowCurrencyPicker(false); }}
+                >
+                  <View style={cm.currencyLeft}>
+                    <Text style={cm.currencySymbol}>{item.symbol}</Text>
+                    <View>
+                      <Text style={cm.currencyCode}>{item.code}</Text>
+                      <Text style={cm.currencyLabel}>{item.label}</Text>
+                    </View>
+                  </View>
+                  {selected && <Ionicons name="checkmark" size={20} color={colors.brand} />}
+                </Pressable>
+              );
+            }}
+            ItemSeparatorComponent={() => <View style={cm.separator} />}
+          />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
+
+const cm = StyleSheet.create({
+  badge: {
+    backgroundColor: '#F3F4F6',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginRight: 6,
+  },
+  badgeText: { fontSize: 12, fontWeight: '700', color: '#374151' },
+  modal: { flex: 1, backgroundColor: '#fff' },
+  modalHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+  },
+  modalTitle:  { fontSize: 18, fontWeight: '700', color: '#111827' },
+  closeBtn:    { width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' },
+  currencyRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingVertical: 16 },
+  currencyRowActive: { backgroundColor: '#FFF0F3' },
+  currencyLeft: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  currencySymbol: { fontSize: 22, fontWeight: '700', color: '#111827', width: 28, textAlign: 'center' },
+  currencyCode:  { fontSize: 15, fontWeight: '700', color: '#111827' },
+  currencyLabel: { fontSize: 13, color: '#6B7280', marginTop: 1 },
+  separator: { height: 1, backgroundColor: '#F3F4F6', marginHorizontal: 20 },
+});

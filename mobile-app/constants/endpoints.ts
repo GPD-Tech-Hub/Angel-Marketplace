@@ -64,6 +64,10 @@ export const ENDPOINTS = {
     CREATE_INTENT: '/payments/create-intent',
     CONFIRM: '/payments/confirm',
     WEBHOOK: '/payments/webhook',
+    LIST: '/payments',
+    ADD: '/payments',
+    UPDATE: (id: string) => `/payments/${id}`,
+    DELETE: (id: string) => `/payments/${id}`,
   },
 
   // Notifications

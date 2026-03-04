@@ -4,8 +4,9 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Product } from '@/types';
-import { formatCurrency, calculateDiscountPercentage } from '@/utils';
+import { formatCurrency, resolvePrice, calculateDiscountPercentage } from '@/utils';
 import { useFavorites } from '@/hooks';
+import { useCurrencyStore } from '@/store/currencyStore';
 import { colors } from '@/constants/colors';
 import { config } from '@/constants/config';
 
@@ -21,6 +22,8 @@ interface ProductCardProps {
 export function ProductCard({ product, width = CARD_W }: ProductCardProps) {
   const router = useRouter();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { currency } = useCurrencyStore();
+  const displayPrice = resolvePrice(product.prices, product.price, currency.code);
   const isLiked      = isFavorite(product.id);
   const hasDiscount  = product.comparePrice && product.comparePrice > product.price;
   const discountPct  = hasDiscount
@@ -80,11 +83,11 @@ export function ProductCard({ product, width = CARD_W }: ProductCardProps) {
             {/* Price row */}
             <View style={s.priceRow}>
               <Text style={[s.price, outOfStock && s.priceMuted]}>
-                {formatCurrency(product.price)}
+                {formatCurrency(displayPrice, currency.code)}
               </Text>
               {hasDiscount && (
                 <Text style={s.comparePrice}>
-                  {formatCurrency(product.comparePrice!)}
+                  {formatCurrency(product.comparePrice!, currency.code)}
                 </Text>
               )}
             </View>

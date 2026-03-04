@@ -110,12 +110,14 @@ export default function NotificationsScreen() {
   const unreadCount   = notifData?.unreadCount ?? 0;
 
   const settings = useMemo(() =>
-    SETTINGS_CONFIG.map(({ id, label, icon }) => ({
-      id, label, icon,
+    SETTINGS_CONFIG.map(({ id, label, description, icon }) => ({
+      id, label, description, icon,
       enabled: settingsData ? (settingsData[id] ?? DEFAULT_SETTINGS[id]) : DEFAULT_SETTINGS[id],
     })),
     [settingsData]
   );
+
+  const generalOn = settings.find((s) => s.id === 'general')?.enabled ?? true;
 
   // ── List header: "Mark all" button ──────────────────────────────────────
   const ListHeader = useMemo(() => {
@@ -153,25 +155,33 @@ export default function NotificationsScreen() {
         />
       </Pressable>
 
-      {settingsOpen && settings.map((setting, i) => (
-        <View key={setting.id}>
-          <View style={s.settingRow}>
-            <View style={s.settingLeft}>
-              <Ionicons name={setting.icon} size={16} color={colors.gray[500]} style={s.settingIcon} />
-              <Text style={s.settingLabel}>{setting.label}</Text>
+      {settingsOpen && settings.map((setting, i) => {
+        // Sub-settings are disabled (and visually dimmed) when general is off
+        const isSubSetting = setting.id !== 'general';
+        const isDisabled   = updateSettings.isPending || (isSubSetting && !generalOn);
+        return (
+          <View key={setting.id}>
+            <View style={[s.settingRow, isDisabled && s.settingRowDimmed]}>
+              <View style={[s.settingIconWrap, { backgroundColor: setting.enabled && !isDisabled ? '#FEF2F4' : colors.gray[100] }]}>
+                <Ionicons name={setting.icon} size={16} color={setting.enabled && !isDisabled ? colors.brand : colors.gray[400]} />
+              </View>
+              <View style={s.settingText}>
+                <Text style={s.settingLabel}>{setting.label}</Text>
+                <Text style={s.settingDesc}>{setting.description}</Text>
+              </View>
+              <Switch
+                value={setting.enabled}
+                onValueChange={() => updateSettings.mutate({ [setting.id]: !setting.enabled })}
+                trackColor={{ false: colors.gray[200], true: colors.brand }}
+                thumbColor="#fff"
+                ios_backgroundColor={colors.gray[200]}
+                disabled={isDisabled}
+              />
             </View>
-            <Switch
-              value={setting.enabled}
-              onValueChange={() => updateSettings.mutate({ [setting.id]: !setting.enabled })}
-              trackColor={{ false: colors.gray[200], true: colors.brand }}
-              thumbColor="#fff"
-              ios_backgroundColor={colors.gray[200]}
-              disabled={updateSettings.isPending}
-            />
+            {i < settings.length - 1 && <View style={s.divider} />}
           </View>
-          {i < settings.length - 1 && <View style={s.divider} />}
-        </View>
-      ))}
+        );
+      })}
     </View>
   );
 
@@ -303,11 +313,16 @@ const s = StyleSheet.create({
   settingsHeaderText: { fontSize: 15, fontWeight: '700', color: colors.gray[800] },
 
   settingRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 16, paddingVertical: 12, gap: 12,
   },
-  settingLeft:  { flexDirection: 'row', alignItems: 'center', flex: 1 },
-  settingIcon:  { marginRight: 12 },
-  settingLabel: { fontSize: 14, fontWeight: '500', color: colors.gray[700] },
-  divider:      { height: 1, backgroundColor: colors.gray[100], marginLeft: 44 },
+  settingRowDimmed: { opacity: 0.45 },
+  settingIconWrap: {
+    width: 36, height: 36, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+  },
+  settingText:  { flex: 1 },
+  settingLabel: { fontSize: 14, fontWeight: '600', color: colors.gray[800] },
+  settingDesc:  { fontSize: 12, color: colors.gray[400], marginTop: 1 },
+  divider:      { height: 1, backgroundColor: colors.gray[100], marginLeft: 64 },
 });

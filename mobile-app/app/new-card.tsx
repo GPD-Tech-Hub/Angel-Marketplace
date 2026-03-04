@@ -1,9 +1,28 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, useWindowDimensions } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  Pressable,
+  TextInput,
+  Alert,
+  ActivityIndicator,
+  useWindowDimensions,
+} from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { newCardScreenStyles as styles } from '@/styles/newCardScreen';
+import { colors } from '@/constants/colors';
+import { useAddPaymentMethod } from '@/queries';
+
+/** Detect card brand from first digits */
+function detectBrand(digits: string): string {
+  if (/^4/.test(digits)) return 'visa';
+  if (/^5[1-5]/.test(digits) || /^2[2-7]/.test(digits)) return 'mastercard';
+  if (/^3[47]/.test(digits)) return 'amex';
+  return 'card';
+}
 
 export default function NewCardScreen() {
   const router = useRouter();
@@ -11,66 +30,81 @@ export default function NewCardScreen() {
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
 
+  const addCardMutation = useAddPaymentMethod();
+
   const [cardNumber, setCardNumber] = useState<string>('');
   const [expiryDate, setExpiryDate] = useState<string>('');
   const [securityCode, setSecurityCode] = useState<string>('');
 
-  // Format card number with spaces (e.g., 1234 5678 9012 3456)
   const handleCardNumberChange = (text: string) => {
-    // Remove all non-digits
-    const cleaned = text.replace(/\D/g, '');
-    // Add spaces every 4 digits
-    const formatted = cleaned.match(/.{1,4}/g)?.join(' ') || cleaned;
+    const cleaned = text.replace(/\D/g, '').slice(0, 16);
+    const formatted = cleaned.match(/.{1,4}/g)?.join(' ') ?? cleaned;
     setCardNumber(formatted);
   };
 
-  // Format expiry date as MM/YY
   const handleExpiryDateChange = (text: string) => {
-    // Remove all non-digits
-    const cleaned = text.replace(/\D/g, '');
-    let formatted = cleaned;
-    
-    if (cleaned.length >= 2) {
-      formatted = cleaned.slice(0, 2) + '/' + cleaned.slice(2, 4);
-    }
-    
+    const cleaned = text.replace(/\D/g, '').slice(0, 4);
+    const formatted = cleaned.length >= 2
+      ? cleaned.slice(0, 2) + '/' + cleaned.slice(2)
+      : cleaned;
     setExpiryDate(formatted);
   };
 
-  // Only allow digits for security code
   const handleSecurityCodeChange = (text: string) => {
-    const cleaned = text.replace(/\D/g, '').slice(0, 3);
-    setSecurityCode(cleaned);
+    setSecurityCode(text.replace(/\D/g, '').slice(0, 4));
   };
 
-  // Button is enabled when all fields are filled
+  const digits = cardNumber.replace(/\s/g, '');
   const isFormValid =
-    cardNumber.replace(/\s/g, '').length >= 16 &&
+    digits.length >= 13 &&
     expiryDate.length === 5 &&
     securityCode.length >= 3;
 
-  const handleAddCard = () => {
+  const handleAddCard = async () => {
     if (!isFormValid) return;
 
-    // TODO: Save card and navigate back
-    console.log('Add card:', { cardNumber, expiryDate, securityCode });
-    router.back();
+    const [monthStr, yearStr] = expiryDate.split('/');
+    const expiryMonth = parseInt(monthStr, 10);
+    const expiryYear = 2000 + parseInt(yearStr, 10);
+
+    if (
+      isNaN(expiryMonth) || expiryMonth < 1 || expiryMonth > 12 ||
+      isNaN(expiryYear)
+    ) {
+      Alert.alert('Invalid Date', 'Please enter a valid expiry date (MM/YY).');
+      return;
+    }
+
+    const brand = detectBrand(digits);
+    const last4 = digits.slice(-4);
+
+    try {
+      await addCardMutation.mutateAsync({
+        type: 'card',
+        brand,
+        last4,
+        expiryMonth,
+        expiryYear,
+      });
+      router.back();
+    } catch (error: any) {
+      Alert.alert(
+        'Failed to Add Card',
+        error.response?.data?.message ?? 'Could not save card. Please try again.'
+      );
+    }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-          hitSlop={10}
-        >
+        <Pressable style={styles.backButton} onPress={() => router.back()} hitSlop={10}>
           {({ pressed }) => (
             <Ionicons
               name="chevron-back"
               size={24}
-              color="#111827"
+              color={colors.gray[900]}
               style={{ opacity: pressed ? 0.7 : 1 }}
             />
           )}
@@ -81,19 +115,17 @@ export default function NewCardScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
-      {/* Scrollable Content */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Section Title */}
         <Text style={[styles.sectionTitle, { fontSize: Math.round(18 * scale) }]}>
           Add Debit or Credit Card
         </Text>
 
-        {/* Card Number Field */}
+        {/* Card Number */}
         <View style={styles.fieldContainer}>
           <Text style={[styles.fieldLabel, { fontSize: Math.round(14 * scale) }]}>
             Card number
@@ -105,13 +137,12 @@ export default function NewCardScreen() {
             value={cardNumber}
             onChangeText={handleCardNumberChange}
             keyboardType="number-pad"
-            maxLength={19} // 16 digits + 3 spaces
+            maxLength={19}
           />
         </View>
 
-        {/* Expiry Date and Security Code Row */}
+        {/* Expiry + CVV */}
         <View style={styles.rowContainer}>
-          {/* Expiry Date Field */}
           <View style={[styles.fieldContainer, styles.halfWidth]}>
             <Text style={[styles.fieldLabel, { fontSize: Math.round(14 * scale) }]}>
               Expiry Date
@@ -127,7 +158,6 @@ export default function NewCardScreen() {
             />
           </View>
 
-          {/* Security Code Field */}
           <View style={[styles.fieldContainer, styles.halfWidth]}>
             <Text style={[styles.fieldLabel, { fontSize: Math.round(14 * scale) }]}>
               Security Code
@@ -140,27 +170,16 @@ export default function NewCardScreen() {
                 value={securityCode}
                 onChangeText={handleSecurityCodeChange}
                 keyboardType="number-pad"
-                maxLength={3}
+                maxLength={4}
+                secureTextEntry
               />
-              <Pressable
-                style={styles.helpButton}
-                hitSlop={10}
-                onPress={() => {
-                  // TODO: Show help/info about CVC
-                  console.log('Show CVC help');
-                }}
-              >
-                <Ionicons
-                  name="help-circle-outline"
-                  size={Math.round(20 * scale)}
-                  color="#6B7280"
-                />
+              <Pressable style={styles.helpButton} hitSlop={10}>
+                <Ionicons name="help-circle-outline" size={Math.round(20 * scale)} color="#6B7280" />
               </Pressable>
             </View>
           </View>
         </View>
 
-        {/* Bottom spacing for button */}
         <View style={{ height: 100 }} />
       </ScrollView>
 
@@ -169,27 +188,33 @@ export default function NewCardScreen() {
         <Pressable
           style={styles.addCardButton}
           onPress={handleAddCard}
-          disabled={!isFormValid}
+          disabled={!isFormValid || addCardMutation.isPending}
         >
           {({ pressed }) => (
             <View
               style={[
                 styles.addCardButtonInner,
-                isFormValid ? styles.addCardButtonEnabled : styles.addCardButtonDisabled,
+                isFormValid && !addCardMutation.isPending
+                  ? styles.addCardButtonEnabled
+                  : styles.addCardButtonDisabled,
                 { opacity: pressed && isFormValid ? 0.9 : 1 },
               ]}
             >
-              <Text
-                style={[
-                  styles.addCardButtonText,
-                  {
-                    fontSize: Math.round(16 * scale),
-                    color: isFormValid ? '#FFFFFF' : '#6B7280',
-                  },
-                ]}
-              >
-                Add Card
-              </Text>
+              {addCardMutation.isPending ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <Text
+                  style={[
+                    styles.addCardButtonText,
+                    {
+                      fontSize: Math.round(16 * scale),
+                      color: isFormValid ? '#FFFFFF' : '#6B7280',
+                    },
+                  ]}
+                >
+                  Add Card
+                </Text>
+              )}
             </View>
           )}
         </Pressable>
