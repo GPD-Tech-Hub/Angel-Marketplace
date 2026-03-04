@@ -18,7 +18,6 @@ import { useTrendingProducts } from '@/queries/useProducts';
 import { useAds } from '@/queries/useAds';
 import { config } from '@/constants/config';
 
-const FALLBACK_CATEGORY_IMAGE = require('../../assets/image/image 5.png');
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -38,19 +37,13 @@ export default function HomeScreen() {
   }, [refetchCategories, refetchTrending, refetchAds]);
 
   const categoryItems: CategoryItem[] = useMemo(() => {
-    if (categories.length === 0) {
-      return [
-        { id: 'apparels', label: 'Apparels', image: require('../../assets/image/image 5.png') },
-        { id: 'footwear', label: 'Footwear', image: require('../../assets/image/image 6.png') },
-        { id: 'household', label: 'Household', image: require('../../assets/image/image 7.png') },
-        { id: 'accessories', label: 'Accessories', image: require('../../assets/image/image 3.png') },
-      ];
-    }
-    return categories.map((c) => ({
-      id: c.id,
-      label: c.name,
-      image: c.image ? { uri: c.image } : FALLBACK_CATEGORY_IMAGE,
-    }));
+    return categories
+      .filter((c) => !!c.image)
+      .map((c) => ({
+        id: c.id,
+        label: c.name,
+        image: { uri: c.image as string },
+      }));
   }, [categories]);
 
   const trendingItems: TrendingProduct[] = useMemo(() => {
@@ -67,7 +60,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.screen}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -99,15 +92,17 @@ export default function HomeScreen() {
             onFilterPress={() => {/* TODO: filters */}}
           />
 
-          <CategoriesRow
-            items={categoryItems}
-            onViewAllPress={() => router.push('/(tabs)/categories')}
-            onCategoryPress={(item) => {
-              const cat = categories.find((c) => c.id === item.id || c.slug === item.id);
-              if (cat?.slug) router.push({ pathname: '/(tabs)/categories', params: { slug: cat.slug } } as any);
-              else router.push('/(tabs)/categories');
-            }}
-          />
+          {categoryItems.length > 0 && (
+            <CategoriesRow
+              items={categoryItems}
+              onViewAllPress={() => router.push('/(tabs)/categories')}
+              onCategoryPress={(item) => {
+                const cat = categories.find((c) => c.id === item.id || c.slug === item.id);
+                if (cat?.slug) router.push({ pathname: '/(tabs)/categories', params: { slug: cat.slug } } as any);
+                else router.push('/(tabs)/categories');
+              }}
+            />
+          )}
 
           {/* Ad banner — fetched from API, falls back to nothing while loading */}
           <HomeBanner ads={ads} />
