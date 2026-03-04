@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -11,6 +11,17 @@ import { cartScreenStyles as styles } from '@/styles/cartScreen';
 import { useAuthStore } from '@/store';
 import { useCartQuery, useUpdateCartItem, useRemoveCartItem, useClearCart } from '@/queries';
 import { colors } from '@/constants/colors';
+import { useCurrencyStore } from '@/store/currencyStore';
+import { resolvePrice, cartAvailableCurrencies } from '@/utils';
+import { CURRENCIES } from '@/store/currencyStore';
+
+/** Compute subtotal in the selected currency by resolving each item's price. */
+function computeSubtotal(items: CartItem[], currencyCode: string): number {
+  return items.reduce((sum, item) => {
+    const { price } = resolvePrice(item.product.prices, item.price, currencyCode);
+    return sum + price * item.quantity;
+  }, 0);
+}
 
 export default function CartScreen() {
   const router = useRouter();
@@ -21,7 +32,8 @@ export default function CartScreen() {
   const updateCartItem = useUpdateCartItem();
   const removeCartItem = useRemoveCartItem();
   const clearCartMutation = useClearCart();
-  const { items: storeItems, subtotal: storeSubtotal, clearCart: clearLocalCart } = useCart();
+  const { items: storeItems, clearCart: clearLocalCart } = useCart();
+  const { currency, setCurrency } = useCurrencyStore();
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -33,9 +45,21 @@ export default function CartScreen() {
 
   const useApiCart = isAuthenticated && apiCart;
   const items: CartItem[] = useApiCart ? (apiCart.items ?? []) : storeItems;
-  const subtotal = useApiCart
-    ? (apiCart.items ?? []).reduce((sum, i) => sum + i.price * i.quantity, 0)
-    : storeSubtotal;
+
+  // Intersection of currencies available for ALL cart products (mirrors PHP cart.php)
+  const availableCurrencyCodes = cartAvailableCurrencies(items);
+  const selectedCurrencyAvailable = items.length === 0 || availableCurrencyCodes.includes(currency.code);
+
+  // Auto-switch to GBP (first available) when selected currency isn't available for all items
+  useEffect(() => {
+    if (items.length > 0 && !selectedCurrencyAvailable) {
+      const fallback = CURRENCIES.find((c) => availableCurrencyCodes.includes(c.code));
+      if (fallback) setCurrency(fallback);
+    }
+  }, [items.length, selectedCurrencyAvailable, availableCurrencyCodes, setCurrency]);
+
+  // Subtotal computed in selected currency — NOT the raw GBP store value
+  const subtotal = computeSubtotal(items, currency.code);
 
   const handleApiIncrement = (item: CartItem) =>
     updateCartItem.mutate({ itemId: item.id, payload: { quantity: item.quantity + 1 } });
@@ -45,7 +69,6 @@ export default function CartScreen() {
     else updateCartItem.mutate({ itemId: item.id, payload: { quantity: item.quantity - 1 } });
   };
 
-  // Removal confirmation is handled inside CartItemCard via Alert
   const handleApiRemove = (item: CartItem) => removeCartItem.mutate(item.id);
 
   const handleClearCart = () => {
@@ -65,9 +88,6 @@ export default function CartScreen() {
       ]
     );
   };
-
-  const SHIPPING_FEE = 5;
-  const total = subtotal + SHIPPING_FEE;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -109,6 +129,15 @@ export default function CartScreen() {
           </View>
         ) : items.length > 0 ? (
           <>
+            {!selectedCurrencyAvailable && (
+              <View style={{ backgroundColor: '#FEF3C7', borderRadius: 10, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="information-circle-outline" size={18} color="#B45309" />
+                <Text style={{ flex: 1, fontSize: 13, color: '#92400E', lineHeight: 18 }}>
+                  Some items aren't available in {currency.code}. Switched to GBP.
+                </Text>
+              </View>
+            )}
+
             <Text style={styles.sectionLabel}>
               {items.length} {items.length === 1 ? 'item' : 'items'}
             </Text>
@@ -125,7 +154,8 @@ export default function CartScreen() {
               />
             ))}
 
-            <OrderSummary subtotal={subtotal} shippingFee={SHIPPING_FEE} total={total} />
+            {/* Show subtotal only — shipping is calculated at checkout (matches PHP cart.php) */}
+            <OrderSummary subtotal={subtotal} />
             <CheckoutButton onPress={() => router.push('/checkout')} />
             <View style={{ height: Math.max(insets.bottom, 20) + 80 }} />
           </>

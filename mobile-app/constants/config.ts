@@ -27,7 +27,7 @@ export const config = {
   APP_NAME: 'Angel Marketplace',
   APP_VERSION: '1.0.0',
   PAGINATION_LIMIT: 20,
-  IMAGE_PLACEHOLDER: 'https://via.placeholder.com/300x300?text=No+Image',
+  IMAGE_PLACEHOLDER: 'https://placehold.co/300x300/F3F4F6/9CA3AF?text=No+Image',
   CURRENCY: 'GBP',
   CURRENCY_SYMBOL: '£',
 };

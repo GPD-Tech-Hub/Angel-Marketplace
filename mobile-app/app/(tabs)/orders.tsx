@@ -20,11 +20,12 @@ function orderItemToCard(
   order: Order & { reviews?: { rating: number }[] },
   item: OrderItem,
   index: number
-): { id: string; productName: string; size: string; price: number; status: string; image: any; rating?: number } {
+): { id: string; orderId: string; productName: string; size: string; price: number; status: string; image: any; rating?: number } {
   const imageUri = item.product?.images?.[0] || config.IMAGE_PLACEHOLDER;
   const rating = order.reviews?.[0]?.rating;
   return {
     id: `${order.id}-${item.id}-${index}`,
+    orderId: order.id,
     productName: item.product?.name ?? 'Product',
     size: '-',
     price: item.price * item.quantity,
@@ -70,13 +71,11 @@ export default function OrdersScreen() {
   const hasOrders = cards.length > 0;
 
   const handleTrackOrder = (orderId: string) => {
-    const baseId = orderId.split('-')[0];
-    if (baseId) router.push(`/order/${baseId}`);
+    if (orderId) router.push(`/order/${orderId}`);
   };
 
   const handleLeaveReview = (orderId: string) => {
-    const baseId = orderId.split('-')[0];
-    if (baseId) setSelectedOrderId(baseId);
+    if (orderId) setSelectedOrderId(orderId);
     setReviewModalVisible(true);
   };
 

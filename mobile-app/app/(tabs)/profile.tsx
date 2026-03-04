@@ -9,6 +9,8 @@ import { useUnreadNotificationCount } from '@/queries';
 import { NumberBadge } from '@/components/ui/Badge';
 import { profileScreenStyles as styles } from '@/styles/profileScreen';
 import { useCurrencyStore, CURRENCIES } from '@/store/currencyStore';
+import { useCartStore } from '@/store/cartStore';
+import { cartAvailableCurrencies } from '@/utils';
 import { colors } from '@/constants/colors';
 
 interface MenuItem {
@@ -29,6 +31,9 @@ export default function ProfileScreen() {
   const { data: unreadData } = useUnreadNotificationCount({ enabled: isAuthenticated });
   const unreadCount = unreadData?.unreadCount ?? 0;
   const { currency, setCurrency } = useCurrencyStore();
+  const cartItems = useCartStore((s) => s.items);
+  const cartCurrencyCodes = cartAvailableCurrencies(cartItems);
+  const hasCartItems = cartItems.length > 0;
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
 
   const menuItems: MenuItem[] = [
@@ -211,21 +216,34 @@ export default function ProfileScreen() {
               <Ionicons name="close" size={22} color="#111827" />
             </Pressable>
           </View>
+          {hasCartItems && (
+            <View style={{ paddingHorizontal: 20, paddingVertical: 10, backgroundColor: '#F9FAFB' }}>
+              <Text style={{ fontSize: 12, color: '#6B7280', lineHeight: 16 }}>
+                Greyed-out currencies aren't available for all items in your cart.
+              </Text>
+            </View>
+          )}
           <FlatList
             data={CURRENCIES}
             keyExtractor={(item) => item.code}
             renderItem={({ item }) => {
               const selected = item.code === currency.code;
+              const unavailable = hasCartItems && !cartCurrencyCodes.includes(item.code);
               return (
                 <Pressable
-                  style={[cm.currencyRow, selected && cm.currencyRowActive]}
-                  onPress={() => { setCurrency(item); setShowCurrencyPicker(false); }}
+                  style={[cm.currencyRow, selected && cm.currencyRowActive, unavailable && cm.currencyRowDisabled]}
+                  onPress={() => {
+                    if (unavailable) return;
+                    setCurrency(item);
+                    setShowCurrencyPicker(false);
+                  }}
+                  disabled={unavailable}
                 >
                   <View style={cm.currencyLeft}>
-                    <Text style={cm.currencySymbol}>{item.symbol}</Text>
+                    <Text style={[cm.currencySymbol, unavailable && cm.textDisabled]}>{item.symbol}</Text>
                     <View>
-                      <Text style={cm.currencyCode}>{item.code}</Text>
-                      <Text style={cm.currencyLabel}>{item.label}</Text>
+                      <Text style={[cm.currencyCode, unavailable && cm.textDisabled]}>{item.code}</Text>
+                      <Text style={[cm.currencyLabel, unavailable && cm.textDisabled]}>{item.label}{unavailable ? ' · Not available for all cart items' : ''}</Text>
                     </View>
                   </View>
                   {selected && <Ionicons name="checkmark" size={20} color={colors.brand} />}
@@ -264,4 +282,6 @@ const cm = StyleSheet.create({
   currencyCode:  { fontSize: 15, fontWeight: '700', color: '#111827' },
   currencyLabel: { fontSize: 13, color: '#6B7280', marginTop: 1 },
   separator: { height: 1, backgroundColor: '#F3F4F6', marginHorizontal: 20 },
+  currencyRowDisabled: { opacity: 0.4 },
+  textDisabled: { color: '#9CA3AF' },
 });

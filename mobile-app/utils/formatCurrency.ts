@@ -77,6 +77,30 @@ export function sortByCurrency<T extends { prices?: Record<string, number> }>(
 }
 
 /**
+ * Return the set of currency codes available for ALL items in the cart.
+ * Mirrors PHP cart.php lines 52–111: intersect each product's price keys.
+ * Products with no prices map default to ['GBP'].
+ */
+export function cartAvailableCurrencies(
+  items: Array<{ product?: { prices?: Record<string, number> } }>
+): string[] {
+  if (!items || items.length === 0) return ['GBP', 'USD', 'EUR', 'ESP', 'NGN']; // no cart — all available
+  let intersection: string[] | null = null;
+  for (const item of items) {
+    const codes = item.product?.prices ? Object.keys(item.product.prices) : ['GBP'];
+    if (intersection === null) {
+      intersection = codes;
+    } else {
+      intersection = intersection.filter((c) => codes.includes(c));
+    }
+  }
+  // Always include GBP as fallback (all products have a GBP base price)
+  const result = intersection ?? ['GBP'];
+  if (!result.includes('GBP')) result.unshift('GBP');
+  return result;
+}
+
+/**
  * Format price with discount
  */
 export function formatDiscount(originalPrice: number, salePrice: number): string {

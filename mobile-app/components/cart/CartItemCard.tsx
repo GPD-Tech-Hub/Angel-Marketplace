@@ -8,6 +8,8 @@ import { useCart } from '@/hooks';
 import { cartItemCardStyles as styles } from '@/styles/cartItemCard';
 import { config } from '@/constants/config';
 import { colors } from '@/constants/colors';
+import { formatCurrency, resolvePrice } from '@/utils';
+import { useCurrencyStore } from '@/store/currencyStore';
 
 type Props = {
   item: CartItem;
@@ -23,6 +25,14 @@ export function CartItemCard({ item, onIncrement, onDecrement, onRemove }: Props
   const storeCart = useCart();
   const router = useRouter();
   const { product, quantity, price } = item;
+  const { currency } = useCurrencyStore();
+  // Cart item prices are stored in GBP (base currency from when added).
+  // Show in the product's native currency for the selected currency where available.
+  const { price: displayUnitPrice, resolvedCurrency } = resolvePrice(
+    product.prices,
+    price,
+    currency.code
+  );
 
   const useApi = !!onIncrement;
   const increment = useApi ? () => onIncrement(item) : () => storeCart.increment(item.productId);
@@ -61,9 +71,6 @@ export function CartItemCard({ item, onIncrement, onDecrement, onRemove }: Props
   const color = item.color as string | undefined;
   const variantLabel = size ? `Size: ${size}` : color ? `Colour: ${color}` : null;
 
-  const formatPrice = (p: number) =>
-    `£${p.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
   return (
     <View style={styles.card}>
       {/* Tappable image → product page */}
@@ -99,7 +106,7 @@ export function CartItemCard({ item, onIncrement, onDecrement, onRemove }: Props
         ) : null}
 
         <Text style={[styles.priceText, { fontSize: Math.round(16 * scale) }]}>
-          {formatPrice(price)}
+          {formatCurrency(displayUnitPrice, resolvedCurrency)}
         </Text>
 
         {/* Quantity stepper */}
@@ -131,7 +138,7 @@ export function CartItemCard({ item, onIncrement, onDecrement, onRemove }: Props
           </View>
 
           <Text style={[styles.itemTotal, { fontSize: Math.round(15 * scale) }]}>
-            {formatPrice(price * quantity)}
+            {formatCurrency(displayUnitPrice * quantity, resolvedCurrency)}
           </Text>
         </View>
       </View>

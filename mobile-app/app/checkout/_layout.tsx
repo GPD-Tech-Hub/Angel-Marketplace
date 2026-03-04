@@ -29,7 +29,7 @@ export default function CheckoutLayout() {
       <Stack.Screen
         name="confirm"
         options={{
-          title: 'Confirm Order',
+          headerShown: false,
         }}
       />
     </Stack>

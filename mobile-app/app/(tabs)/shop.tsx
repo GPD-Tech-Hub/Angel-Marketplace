@@ -31,12 +31,7 @@ const SORT_OPTIONS: { key: SortOption; label: string }[] = [
   { key: 'name',       label: 'A – Z' },
 ];
 
-const PRICE_PRESETS: { label: string; min?: number; max?: number }[] = [
-  { label: 'Under £25',   min: undefined, max: 25 },
-  { label: '£25 – £50',  min: 25,        max: 50 },
-  { label: '£50 – £100', min: 50,        max: 100 },
-  { label: 'Over £100',  min: 100,       max: undefined },
-];
+// PRICE_PRESETS is built dynamically inside the component using currency.symbol
 
 function sortToParams(sort: SortOption): Pick<ProductFilters, 'sortBy' | 'sortOrder'> {
   switch (sort) {
@@ -49,6 +44,15 @@ function sortToParams(sort: SortOption): Pick<ProductFilters, 'sortBy' | 'sortOr
 
 export default function ShopScreen() {
   const { categoryId: paramCategoryId } = useLocalSearchParams<{ categoryId?: string }>();
+  const { currency } = useCurrencyStore();
+  const sym = currency.symbol;
+
+  const PRICE_PRESETS: { label: string; min?: number; max?: number }[] = [
+    { label: `Under ${sym}25`,         min: undefined, max: 25 },
+    { label: `${sym}25 – ${sym}50`,    min: 25,        max: 50 },
+    { label: `${sym}50 – ${sym}100`,   min: 50,        max: 100 },
+    { label: `Over ${sym}100`,         min: 100,       max: undefined },
+  ];
 
   const [searchQuery, setSearchQuery]           = useState('');
   const [submittedQuery, setSubmittedQuery]     = useState('');
@@ -157,8 +161,8 @@ export default function ShopScreen() {
   const products  = isSearching ? searchResults  : browseProducts;
 
   const filterLabel = [
-    appliedMin !== undefined && `From £${appliedMin}`,
-    appliedMax !== undefined && `To £${appliedMax}`,
+    appliedMin !== undefined && `From ${sym}${appliedMin}`,
+    appliedMax !== undefined && `To ${sym}${appliedMax}`,
   ].filter(Boolean).join(' · ');
 
   return (
@@ -349,13 +353,13 @@ export default function ShopScreen() {
           <View style={s.sheet}>
             <View style={s.handle} />
             <Text style={s.sheetTitle}>Filter by Price</Text>
-            <Text style={s.sheetSub}>Enter a price range in GBP (£)</Text>
+            <Text style={s.sheetSub}>Enter a price range in {currency.code} ({sym})</Text>
 
             <View style={s.inputRow}>
               <View style={s.inputGroup}>
                 <Text style={s.inputLabel}>Min</Text>
                 <View style={s.inputBox}>
-                  <Text style={s.inputPrefix}>£</Text>
+                  <Text style={s.inputPrefix}>{sym}</Text>
                   <TextInput
                     style={s.input}
                     keyboardType="decimal-pad"
@@ -371,7 +375,7 @@ export default function ShopScreen() {
               <View style={s.inputGroup}>
                 <Text style={s.inputLabel}>Max</Text>
                 <View style={s.inputBox}>
-                  <Text style={s.inputPrefix}>£</Text>
+                  <Text style={s.inputPrefix}>{sym}</Text>
                   <TextInput
                     style={s.input}
                     keyboardType="decimal-pad"

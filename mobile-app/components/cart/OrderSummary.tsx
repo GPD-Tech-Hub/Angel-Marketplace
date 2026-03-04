@@ -1,26 +1,25 @@
 import React from 'react';
 import { View, Text, useWindowDimensions } from 'react-native';
 import { orderSummaryStyles as styles } from '@/styles/orderSummary';
+import { formatCurrency } from '@/utils';
+import { useCurrencyStore } from '@/store/currencyStore';
 
 type Props = {
   subtotal: number;
+  /** When omitted, shipping row and total row are hidden (cart view — matches PHP cart.php) */
   shippingFee?: number;
+  /** Override total; only used when shippingFee is provided */
   total?: number;
-  /** Coupon code that has been applied — shows a green "Applied" line */
   couponCode?: string;
 };
 
-export function OrderSummary({ subtotal, shippingFee = 5, total, couponCode }: Props) {
+export function OrderSummary({ subtotal, shippingFee, total, couponCode }: Props) {
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
+  const { currency } = useCurrencyStore();
 
-  const calculatedTotal = total ?? subtotal + shippingFee;
-
-  const formatPrice = (price: number) =>
-    `£${price.toLocaleString('en-GB', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
+  const showShipping = shippingFee !== undefined;
+  const calculatedTotal = total ?? (showShipping ? subtotal + (shippingFee ?? 0) : subtotal);
 
   return (
     <View style={styles.container}>
@@ -30,21 +29,23 @@ export function OrderSummary({ subtotal, shippingFee = 5, total, couponCode }: P
           Sub-total
         </Text>
         <Text style={[styles.value, { fontSize: Math.round(14 * scale) }]}>
-          {formatPrice(subtotal)}
+          {formatCurrency(subtotal, currency.code)}
         </Text>
       </View>
 
-      {/* Shipping fee */}
-      <View style={styles.row}>
-        <Text style={[styles.label, { fontSize: Math.round(14 * scale) }]}>
-          Shipping fee
-        </Text>
-        <Text style={[styles.value, { fontSize: Math.round(14 * scale) }]}>
-          {shippingFee === 0 ? 'Free' : formatPrice(shippingFee)}
-        </Text>
-      </View>
+      {/* Shipping — only shown in checkout, not cart (mirrors PHP cart.php behaviour) */}
+      {showShipping && (
+        <View style={styles.row}>
+          <Text style={[styles.label, { fontSize: Math.round(14 * scale) }]}>
+            Shipping
+          </Text>
+          <Text style={[styles.value, { fontSize: Math.round(14 * scale) }]}>
+            {shippingFee === 0 ? 'Free' : formatCurrency(shippingFee!, currency.code)}
+          </Text>
+        </View>
+      )}
 
-      {/* Coupon discount line */}
+      {/* Coupon */}
       {couponCode ? (
         <View style={styles.row}>
           <Text style={[styles.label, { fontSize: Math.round(14 * scale) }]}>
@@ -59,13 +60,13 @@ export function OrderSummary({ subtotal, shippingFee = 5, total, couponCode }: P
       {/* Divider */}
       <View style={styles.divider} />
 
-      {/* Total */}
+      {/* Total — labelled "Subtotal" in cart view, "Total" in checkout view */}
       <View style={styles.totalRow}>
         <Text style={[styles.totalLabel, { fontSize: Math.round(16 * scale) }]}>
-          Total
+          {showShipping ? 'Total' : 'Subtotal'}
         </Text>
         <Text style={[styles.totalValue, { fontSize: Math.round(20 * scale) }]}>
-          {formatPrice(calculatedTotal)}
+          {formatCurrency(calculatedTotal, currency.code)}
         </Text>
       </View>
     </View>
