@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,14 +10,15 @@ import {
   Alert,
   StyleSheet,
   ListRenderItemInfo,
+  RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
-import { useProduct, useAddCartItem } from '@/queries';
+import { useProduct, useAddCartItem, useCartQuery } from '@/queries';
 import { useCart, useFavorites } from '@/hooks';
-import { useAuthStore } from '@/store';
+import { useAuthStore } from '@/store/authStore';
 import { formatCurrency, calculateDiscountPercentage } from '@/utils';
 import { config } from '@/constants/config';
 import { colors } from '@/constants/colors';
@@ -31,29 +32,59 @@ export default function ProductDetailScreen() {
   const insets = useSafeAreaInsets();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
-  const { data: product, isLoading, error } = useProduct(slug);
-  const { addToCart, isInCart, getItemQuantity } = useCart();
+  const { data: product, isLoading, error, refetch: refetchProduct } = useProduct(slug);
+  const { addToCart, isInCart: localIsInCart, getItemQuantity: localGetQty } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
   const addCartItemMutation = useAddCartItem();
+
+  // API cart — only fetched when authenticated
+  const { data: apiCart, refetch: refetchCart } = useCartQuery({ enabled: isAuthenticated });
 
   const [activeImg, setActiveImg] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const flatRef = useRef<FlatList>(null);
 
+  // ── Cart status: always read from the correct source ────────────
+  const inCart = product
+    ? isAuthenticated
+      ? (apiCart?.items ?? []).some((i) => i.productId === product.id)
+      : localIsInCart(product.id)
+    : false;
+
+  const cartQty = product
+    ? isAuthenticated
+      ? (apiCart?.items ?? [])
+          .filter((i) => i.productId === product.id)
+          .reduce((sum, i) => sum + i.quantity, 0)
+      : localGetQty(product.id)
+    : 0;
+
   const isLiked    = product ? isFavorite(product.id) : false;
-  const inCart     = product ? isInCart(product.id) : false;
-  const cartQty    = product ? getItemQuantity(product.id) : 0;
   const hasDiscount = product?.comparePrice && product.comparePrice > product.price;
   const outOfStock  = product ? product.stock === 0 : false;
 
-  // A variant selection is required before adding to cart if the product has variants
   const needsSize  = product?.hasSizes && (product.sizes?.length ?? 0) > 0;
   const needsColor = product?.hasColors && (product.colors?.length ?? 0) > 0;
   const variantReady = (!needsSize || selectedSize) && (!needsColor || selectedColor);
 
+  // ── Pull-to-refresh ─────────────────────────────────────────────
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        refetchProduct(),
+        isAuthenticated ? refetchCart() : Promise.resolve(),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchProduct, refetchCart, isAuthenticated]);
+
+  // ── Add to cart ─────────────────────────────────────────────────
   const handleAddToCart = async () => {
     if (!product) return;
     if (!variantReady) {
@@ -69,6 +100,8 @@ export default function ProductDetailScreen() {
           size: selectedSize ?? undefined,
           color: selectedColor ?? undefined,
         });
+        // refresh cart badge immediately
+        await refetchCart();
       } else {
         addToCart(product, quantity);
       }
@@ -107,13 +140,15 @@ export default function ProductDetailScreen() {
     );
   }
 
-  const images       = product.images.length > 0 ? product.images : [config.IMAGE_PLACEHOLDER];
-  const rating       = product.rating ?? 0;
-  const reviewsCount = product.reviewsCount ?? 0;
-  const reviews      = product.reviews ?? [];
-  const features     = product.features ?? [];
-  const sizes        = product.sizes ?? [];
+  const images        = product.images.length > 0 ? product.images : [config.IMAGE_PLACEHOLDER];
+  const rating        = product.rating ?? 0;
+  const reviewsCount  = product.reviewsCount ?? 0;
+  const reviews       = product.reviews ?? [];
+  const features      = product.features ?? [];
+  const sizes         = product.sizes ?? [];
   const productColors = product.colors ?? [];
+
+  const ctaDisabled = outOfStock || addingToCart || !variantReady;
 
   const renderImage = ({ item }: ListRenderItemInfo<string>) => (
     <View style={{ width: SW, height: IMG_H, backgroundColor: '#F7F7F7', alignItems: 'center', justifyContent: 'center' }}>
@@ -126,11 +161,20 @@ export default function ProductDetailScreen() {
     </View>
   );
 
-  const ctaDisabled = outOfStock || addingToCart || !variantReady;
-
   return (
     <View style={s.screen}>
-      <ScrollView showsVerticalScrollIndicator={false} bounces>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        bounces
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.brand}
+            colors={[colors.brand]}
+          />
+        }
+      >
 
         {/* ── Image carousel ──────────────────────────────────── */}
         <View style={{ width: SW, height: IMG_H, backgroundColor: '#F7F7F7' }}>
@@ -209,17 +253,14 @@ export default function ProductDetailScreen() {
         {/* ── Product info ─────────────────────────────────────── */}
         <View style={s.info}>
 
-          {/* Category chip */}
           {product.category?.name && (
             <View style={s.chip}>
               <Text style={s.chipText}>{product.category.name.toUpperCase()}</Text>
             </View>
           )}
 
-          {/* Name */}
           <Text style={s.name}>{product.name}</Text>
 
-          {/* Rating */}
           {rating > 0 && (
             <View style={s.ratingRow}>
               {Array.from({ length: 5 }).map((_, i) => (
@@ -231,7 +272,6 @@ export default function ProductDetailScreen() {
             </View>
           )}
 
-          {/* Price */}
           <View style={s.priceRow}>
             <Text style={s.price}>{formatCurrency(product.price)}</Text>
             {hasDiscount && (
@@ -241,7 +281,6 @@ export default function ProductDetailScreen() {
 
           <View style={s.divider} />
 
-          {/* Stock */}
           <View style={s.stockRow}>
             <View style={[s.stockDot, { backgroundColor: outOfStock ? colors.error : colors.success }]} />
             <Text style={[s.stockText, { color: outOfStock ? colors.error : colors.success }]}>
@@ -249,11 +288,13 @@ export default function ProductDetailScreen() {
             </Text>
           </View>
 
-          {/* ── Size selector ──────────────────────────────────── */}
+          {/* Size selector */}
           {needsSize && sizes.length > 0 && (
             <View style={s.variantSection}>
               <Text style={s.variantLabel}>
-                Size{selectedSize ? <Text style={{ color: colors.brand, fontWeight: '700' }}> — {selectedSize}</Text> : <Text style={{ color: colors.error }}> *</Text>}
+                Size{selectedSize
+                  ? <Text style={{ color: colors.brand, fontWeight: '700' }}> — {selectedSize}</Text>
+                  : <Text style={{ color: colors.error }}> *</Text>}
               </Text>
               <View style={s.variantRow}>
                 {sizes.map((sz) => (
@@ -269,11 +310,13 @@ export default function ProductDetailScreen() {
             </View>
           )}
 
-          {/* ── Colour selector ────────────────────────────────── */}
+          {/* Colour selector */}
           {needsColor && productColors.length > 0 && (
             <View style={s.variantSection}>
               <Text style={s.variantLabel}>
-                Colour{selectedColor ? <Text style={{ color: colors.brand, fontWeight: '700' }}> — {selectedColor}</Text> : <Text style={{ color: colors.error }}> *</Text>}
+                Colour{selectedColor
+                  ? <Text style={{ color: colors.brand, fontWeight: '700' }}> — {selectedColor}</Text>
+                  : <Text style={{ color: colors.error }}> *</Text>}
               </Text>
               <View style={s.variantRow}>
                 {productColors.map((col) => (
@@ -289,11 +332,11 @@ export default function ProductDetailScreen() {
             </View>
           )}
 
-          {/* ── Quantity ──────────────────────────────────────── */}
+          {/* Quantity */}
           {!outOfStock && (
             <View style={s.qtyRow}>
               <Text style={s.qtyLabel}>
-                Quantity{inCart ? `  ·  ${cartQty} in cart` : ''}
+                Quantity{cartQty > 0 ? `  ·  ${cartQty} in cart` : ''}
               </Text>
               <View style={s.stepper}>
                 <Pressable style={s.stepBtn} onPress={() => setQuantity(q => Math.max(1, q - 1))} hitSlop={6}>
@@ -314,7 +357,6 @@ export default function ProductDetailScreen() {
 
           <View style={s.divider} />
 
-          {/* ── Description ───────────────────────────────────── */}
           {product.description ? (
             <>
               <Text style={s.sectionTitle}>About this product</Text>
@@ -322,7 +364,6 @@ export default function ProductDetailScreen() {
             </>
           ) : null}
 
-          {/* ── Specifications ────────────────────────────────── */}
           {features.length > 0 && (
             <>
               <View style={s.divider} />
@@ -338,7 +379,6 @@ export default function ProductDetailScreen() {
             </>
           )}
 
-          {/* ── Reviews ───────────────────────────────────────── */}
           {reviews.length > 0 && (
             <>
               <View style={s.divider} />
@@ -377,7 +417,6 @@ export default function ProductDetailScreen() {
             </>
           )}
 
-          {/* Bottom spacer */}
           <View style={{ height: 100 + insets.bottom }} />
         </View>
       </ScrollView>
@@ -391,7 +430,7 @@ export default function ProductDetailScreen() {
         >
           {addingToCart
             ? <ActivityIndicator size="small" color={colors.brand} />
-            : <Text style={s.btnOutlineText}>{inCart ? 'In Cart' : 'Add to Cart'}</Text>
+            : <Text style={s.btnOutlineText}>{inCart ? 'Add More' : 'Add to Cart'}</Text>
           }
         </Pressable>
         <Pressable
@@ -447,7 +486,6 @@ const s = StyleSheet.create({
   stockDot: { width: 8, height: 8, borderRadius: 4 },
   stockText: { fontSize: 13, fontWeight: '500' },
 
-  // Variants
   variantSection: { marginBottom: 16 },
   variantLabel:   { fontSize: 14, fontWeight: '600', color: '#111827', marginBottom: 10 },
   variantRow:     { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -469,14 +507,12 @@ const s = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 10 },
   description:  { fontSize: 14, color: colors.gray[500], lineHeight: 22 },
 
-  // Specs table
   specsTable: { borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: '#F3F4F6' },
   specRow:    { flexDirection: 'row', paddingHorizontal: 14, paddingVertical: 10 },
   specRowAlt: { backgroundColor: '#F9FAFB' },
   specKey:    { flex: 1, fontSize: 13, fontWeight: '600', color: '#374151' },
   specVal:    { flex: 1, fontSize: 13, color: colors.gray[500], textAlign: 'right' },
 
-  // Reviews
   reviewsHeader:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   ratingBadge:      { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFFBEB', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
   ratingBadgeText:  { fontSize: 12, fontWeight: '700', color: '#92400E' },
@@ -488,7 +524,6 @@ const s = StyleSheet.create({
   reviewDate:       { fontSize: 11, color: colors.gray[400] },
   reviewComment:    { fontSize: 13, color: colors.gray[600], lineHeight: 19 },
 
-  // Action bar
   bar:            { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingHorizontal: 20, paddingTop: 12, flexDirection: 'row', gap: 12, shadowColor: '#000', shadowOffset: { width: 0, height: -3 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 8 },
   btnOutline:     { flex: 1, height: 50, borderRadius: 14, borderWidth: 1.5, borderColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
   btnOutlineText: { fontSize: 15, fontWeight: '700', color: colors.brand },
