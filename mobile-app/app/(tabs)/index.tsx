@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
+import React, { useMemo, useState, useCallback } from 'react';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
@@ -23,8 +23,16 @@ export default function HomeScreen() {
   const { horizontalPadding } = useResponsive();
   const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
 
-  const { data: categories = [], isLoading: categoriesLoading } = useCategories();
-  const { data: trendingProducts = [], isLoading: trendingLoading } = useTrendingProducts(10);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const { data: categories = [], isLoading: categoriesLoading, refetch: refetchCategories } = useCategories();
+  const { data: trendingProducts = [], isLoading: trendingLoading, refetch: refetchTrending } = useTrendingProducts(10);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchCategories(), refetchTrending()]);
+    setRefreshing(false);
+  }, [refetchCategories, refetchTrending]);
 
   const categoryItems: CategoryItem[] = useMemo(() => {
     if (categories.length === 0) {
@@ -54,9 +62,12 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.screen}>
-      <ScrollView 
+      <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* Top section (Discover) */}
         <View style={[styles.container, { paddingHorizontal: horizontalPadding }]}>
