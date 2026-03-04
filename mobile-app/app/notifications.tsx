@@ -46,27 +46,17 @@ function relativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
 }
 
-// ── Settings config ──────────────────────────────────────────────────────────
-type SettingKey = 'general' | 'sound' | 'vibrate' | 'specialOffer' | 'promoDiscounts' |
-                  'payments' | 'cashback' | 'appUpdates' | 'newService' | 'newTips';
+// ── Settings config — only settings the backend actually honours ─────────────
+type SettingKey = 'general' | 'orders' | 'payments';
 
-const SETTINGS_CONFIG: { id: SettingKey; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
-  { id: 'general',       label: 'General',           icon: 'notifications-outline' },
-  { id: 'sound',         label: 'Sound',             icon: 'volume-high-outline' },
-  { id: 'vibrate',       label: 'Vibrate',           icon: 'phone-portrait-outline' },
-  { id: 'specialOffer',  label: 'Special Offers',    icon: 'gift-outline' },
-  { id: 'promoDiscounts',label: 'Promos & Discounts',icon: 'pricetag-outline' },
-  { id: 'payments',      label: 'Payments',          icon: 'card-outline' },
-  { id: 'cashback',      label: 'Cashback',          icon: 'cash-outline' },
-  { id: 'appUpdates',    label: 'App Updates',       icon: 'refresh-outline' },
-  { id: 'newService',    label: 'New Services',      icon: 'sparkles-outline' },
-  { id: 'newTips',       label: 'Tips & Guides',     icon: 'bulb-outline' },
+const SETTINGS_CONFIG: { id: SettingKey; label: string; description: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+  { id: 'general',  label: 'All Notifications', description: 'Master switch for all alerts',              icon: 'notifications-outline' },
+  { id: 'orders',   label: 'Order Updates',      description: 'Order placed & cancellation confirmations', icon: 'bag-check-outline' },
+  { id: 'payments', label: 'Payment Alerts',     description: 'Payment received confirmations',            icon: 'card-outline' },
 ];
 
 const DEFAULT_SETTINGS: Record<SettingKey, boolean> = {
-  general: true, sound: true, vibrate: true, specialOffer: true,
-  promoDiscounts: true, payments: true, cashback: true,
-  appUpdates: false, newService: true, newTips: false,
+  general: true, orders: true, payments: true,
 };
 
 // ── Single notification row ─────────────────────────────────────────────────
