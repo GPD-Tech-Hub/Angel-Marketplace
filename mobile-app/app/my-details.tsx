@@ -251,9 +251,28 @@ export default function MyDetailsScreen() {
       setFirstName(profile.firstName || '');
       setLastName(profile.lastName || '');
       setEmail(profile.email || '');
-      setDateOfBirth(profile.dateOfBirth || '');
+      // API returns ISO string (YYYY-MM-DD...) — convert to MM/DD/YYYY for display
+      if (profile.dateOfBirth) {
+        const d = new Date(profile.dateOfBirth);
+        if (!isNaN(d.getTime())) {
+          const mm = String(d.getUTCMonth() + 1).padStart(2, '0');
+          const dd = String(d.getUTCDate()).padStart(2, '0');
+          const yyyy = d.getUTCFullYear();
+          setDateOfBirth(`${mm}/${dd}/${yyyy}`);
+        } else {
+          setDateOfBirth(profile.dateOfBirth);
+        }
+      } else {
+        setDateOfBirth('');
+      }
       setGender(profile.gender || '');
       const phone = profile.phone || '';
+      // Extract dial code and set selectedCountryCode if we can match it
+      const dialMatch = phone.match(/^(\+\d+)\s*/);
+      if (dialMatch) {
+        const matched = COUNTRY_CODES.find((c) => c.code === dialMatch[1]);
+        if (matched) setSelectedCountryCode(matched);
+      }
       setPhoneNumber(phone.replace(/^\+\d+\s*/, '').trim());
     }
   }, [profile]);
