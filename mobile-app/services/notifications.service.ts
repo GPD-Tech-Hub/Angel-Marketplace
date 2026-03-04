@@ -13,16 +13,9 @@ export interface NotificationItem {
 }
 
 export interface NotificationSettingsData {
-  general: boolean;
-  sound: boolean;
-  vibrate: boolean;
-  specialOffer: boolean;
-  promoDiscounts: boolean;
-  payments: boolean;
-  cashback: boolean;
-  appUpdates: boolean;
-  newService: boolean;
-  newTips: boolean;
+  general:  boolean;   // master switch — all notifications
+  orders:   boolean;   // order placed + cancelled
+  payments: boolean;   // payment received (Stripe)
   updatedAt: string;
 }
 
