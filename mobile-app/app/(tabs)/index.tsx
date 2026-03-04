@@ -96,20 +96,15 @@ export default function HomeScreen() {
           {categoryItems.length > 0 && (
             <CategoriesRow
               items={categoryItems}
-              onViewAllPress={() => router.push('/(tabs)/categories')}
+              onViewAllPress={() => router.push('/(tabs)/shop')}
               onCategoryPress={(item) => {
-                const cat = categories.find((c) => c.id === item.id || c.slug === item.id);
-                if (cat?.slug) router.push({ pathname: '/(tabs)/categories', params: { slug: cat.slug } } as any);
-                else router.push('/(tabs)/categories');
+                router.push({ pathname: '/(tabs)/shop', params: { categoryId: item.id } } as any);
               }}
             />
           )}
 
           {/* Ad banner — fetched from API, falls back to nothing while loading */}
           <HomeBanner ads={ads} />
-
-          {/* Newsletter opt-in */}
-          <NewsletterCard />
 
           {trendingLoading ? (
             <View style={{ paddingVertical: 24, alignItems: 'center' }}>
@@ -147,6 +142,9 @@ export default function HomeScreen() {
               }}
             />
           )}
+
+          {/* Newsletter opt-in */}
+          <NewsletterCard />
         </View>
       </ScrollView>
     </SafeAreaView>

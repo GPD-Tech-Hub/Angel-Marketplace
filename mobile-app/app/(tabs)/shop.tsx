@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,17 +11,15 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 import { useProducts, useProductSearch, useCategories } from '@/queries';
 import { DiscoverSearchBar } from '@/components/layout/DiscoverSearchBar';
 import { ProductGrid } from '@/components/products';
 import { colors } from '@/constants/colors';
 import { ProductFilters } from '@/types';
-
-const { width: SW } = Dimensions.get('window');
 
 type SortOption = 'newest' | 'price_asc' | 'price_desc' | 'name';
 
@@ -49,18 +47,24 @@ function sortToParams(sort: SortOption): Pick<ProductFilters, 'sortBy' | 'sortOr
 }
 
 export default function ShopScreen() {
+  const { categoryId: paramCategoryId } = useLocalSearchParams<{ categoryId?: string }>();
+
   const [searchQuery, setSearchQuery]           = useState('');
   const [submittedQuery, setSubmittedQuery]     = useState('');
   const [activeSort, setActiveSort]             = useState<SortOption>('newest');
-  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(paramCategoryId ?? null);
   const [refreshing, setRefreshing]             = useState(false);
 
-  // Price filter state
-  const [filterVisible, setFilterVisible]     = useState(false);
-  const [minPriceInput, setMinPriceInput]     = useState('');
-  const [maxPriceInput, setMaxPriceInput]     = useState('');
-  const [appliedMin, setAppliedMin]           = useState<number | undefined>();
-  const [appliedMax, setAppliedMax]           = useState<number | undefined>();
+  // When navigated to with a categoryId param, apply it
+  useEffect(() => {
+    if (paramCategoryId) setActiveCategoryId(paramCategoryId);
+  }, [paramCategoryId]);
+
+  const [filterVisible, setFilterVisible]   = useState(false);
+  const [minPriceInput, setMinPriceInput]   = useState('');
+  const [maxPriceInput, setMaxPriceInput]   = useState('');
+  const [appliedMin, setAppliedMin]         = useState<number | undefined>();
+  const [appliedMax, setAppliedMax]         = useState<number | undefined>();
 
   const hasActiveFilters = appliedMin !== undefined || appliedMax !== undefined;
 
@@ -87,7 +91,8 @@ export default function ShopScreen() {
     refetch: refetchSearch,
   } = useProductSearch(submittedQuery, isSearching);
 
-  const { data: categories = [] } = useCategories();
+  // Always fetch categories — used to know if the strip row should show
+  const { data: categories = [], isLoading: catsLoading } = useCategories();
 
   const browseProducts = useMemo(
     () => (browseData?.pages ?? []).flatMap((p) => p.products ?? []),
@@ -147,8 +152,8 @@ export default function ShopScreen() {
   const presetActive = (preset: typeof PRICE_PRESETS[number]) =>
     appliedMin === preset.min && appliedMax === preset.max;
 
-  const isLoading  = isSearching ? searchFetching : browseLoading;
-  const products   = isSearching ? searchResults  : browseProducts;
+  const isLoading = isSearching ? searchFetching : browseLoading;
+  const products  = isSearching ? searchResults  : browseProducts;
 
   const filterLabel = [
     appliedMin !== undefined && `From £${appliedMin}`,
@@ -168,7 +173,7 @@ export default function ShopScreen() {
         )}
       </View>
 
-      {/* ── Search ── */}
+      {/* ── Search bar ── */}
       <View style={s.searchWrap}>
         <DiscoverSearchBar
           value={searchQuery}
@@ -178,72 +183,101 @@ export default function ShopScreen() {
         />
       </View>
 
-      {/* ── Active price filter pill ── */}
-      {hasActiveFilters && (
-        <View style={s.filterPillRow}>
-          <View style={s.filterPill}>
-            <Ionicons name="pricetag-outline" size={11} color={colors.brand} />
-            <Text style={s.filterPillText}>{filterLabel}</Text>
-            <Pressable onPress={clearFilters} hitSlop={8}>
-              <Ionicons name="close" size={13} color={colors.brand} />
-            </Pressable>
-          </View>
-        </View>
-      )}
-
-      {/* ── Sort + Category strips (browse only) ── */}
+      {/* ── Filter/Sort toolbar — always reserves height, hidden during search ── */}
       {!isSearching && (
-        <>
-          {/* Sort */}
+        <View style={s.toolbar}>
+
+          {/* Row 1: Sort pills */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={s.strip}
+            contentContainerStyle={s.pillRow}
           >
             {SORT_OPTIONS.map((opt) => {
-              const active = activeSort === opt.key;
+              const on = activeSort === opt.key;
               return (
                 <Pressable
                   key={opt.key}
-                  style={[s.chip, active && s.chipOn]}
+                  style={[s.pill, on && s.pillActive]}
                   onPress={() => setActiveSort(opt.key)}
                 >
-                  <Text style={[s.chipLabel, active && s.chipLabelOn]}>
+                  <Text style={[s.pillText, on && s.pillTextActive]}>
                     {opt.label}
                   </Text>
                 </Pressable>
               );
             })}
+
+            {/* Price filter pill — lives in same row */}
+            <Pressable
+              style={[s.pill, s.filterPill, hasActiveFilters && s.filterPillActive]}
+              onPress={openFilter}
+            >
+              <Ionicons
+                name="options-outline"
+                size={13}
+                color={hasActiveFilters ? colors.brand : colors.gray[500]}
+              />
+              <Text style={[s.pillText, hasActiveFilters && s.pillTextActive]}>
+                {hasActiveFilters ? filterLabel : 'Price'}
+              </Text>
+              {hasActiveFilters && (
+                <Pressable
+                  onPress={(e) => { e.stopPropagation(); clearFilters(); }}
+                  hitSlop={6}
+                >
+                  <Ionicons name="close" size={12} color={colors.brand} />
+                </Pressable>
+              )}
+            </Pressable>
           </ScrollView>
 
-          {/* Categories */}
-          {categories.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={s.catStrip}
-            >
-              <Pressable
-                style={[s.catChip, !activeCategoryId && s.catChipOn]}
-                onPress={() => setActiveCategoryId(null)}
+          {/* Row 2: Category pills — fixed height prevents layout jump */}
+          <View style={s.catRowWrap}>
+            {catsLoading ? (
+              // Skeleton placeholders so height is reserved immediately
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={s.pillRow}
               >
-                <Text style={[s.catLabel, !activeCategoryId && s.catLabelOn]}>All</Text>
-              </Pressable>
-              {categories.map((cat) => {
-                const active = activeCategoryId === cat.id;
-                return (
-                  <Pressable
-                    key={cat.id}
-                    style={[s.catChip, active && s.catChipOn]}
-                    onPress={() => setActiveCategoryId(active ? null : cat.id)}
-                  >
-                    <Text style={[s.catLabel, active && s.catLabelOn]}>{cat.name}</Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-          )}
-        </>
+                {[72, 100, 80, 90, 65].map((w, i) => (
+                  <View key={i} style={[s.catSkeleton, { width: w }]} />
+                ))}
+              </ScrollView>
+            ) : categories.length > 0 ? (
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={s.pillRow}
+              >
+                <Pressable
+                  style={[s.catPill, !activeCategoryId && s.catPillActive]}
+                  onPress={() => setActiveCategoryId(null)}
+                >
+                  <Text style={[s.catPillText, !activeCategoryId && s.catPillTextActive]}>
+                    All
+                  </Text>
+                </Pressable>
+                {categories.map((cat) => {
+                  const on = activeCategoryId === cat.id;
+                  return (
+                    <Pressable
+                      key={cat.id}
+                      style={[s.catPill, on && s.catPillActive]}
+                      onPress={() => setActiveCategoryId(on ? null : cat.id)}
+                    >
+                      <Text style={[s.catPillText, on && s.catPillTextActive]}>
+                        {cat.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            ) : null}
+          </View>
+        </View>
       )}
 
       {/* ── Products ── */}
@@ -259,7 +293,8 @@ export default function ShopScreen() {
           ListHeaderComponent={
             isSearching ? (
               <Text style={s.resultCount}>
-                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for &ldquo;{submittedQuery}&rdquo;
+                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''}{' '}
+                for &ldquo;{submittedQuery}&rdquo;
               </Text>
             ) : undefined
           }
@@ -270,7 +305,9 @@ export default function ShopScreen() {
                 {isSearching ? `No results for "${submittedQuery}"` : 'No products found'}
               </Text>
               <Text style={s.emptySub}>
-                {hasActiveFilters ? 'Try adjusting your price filter' : 'Try a different search or category'}
+                {hasActiveFilters
+                  ? 'Try adjusting your price filter'
+                  : 'Try a different search or category'}
               </Text>
               {isSearching && (
                 <Pressable style={s.emptyBtn} onPress={handleClearSearch}>
@@ -309,11 +346,9 @@ export default function ShopScreen() {
         >
           <View style={s.sheet}>
             <View style={s.handle} />
-
             <Text style={s.sheetTitle}>Filter by Price</Text>
             <Text style={s.sheetSub}>Enter a price range in GBP (£)</Text>
 
-            {/* Inputs */}
             <View style={s.inputRow}>
               <View style={s.inputGroup}>
                 <Text style={s.inputLabel}>Min</Text>
@@ -330,9 +365,7 @@ export default function ShopScreen() {
                   />
                 </View>
               </View>
-
               <View style={s.inputDivider} />
-
               <View style={s.inputGroup}>
                 <Text style={s.inputLabel}>Max</Text>
                 <View style={s.inputBox}>
@@ -351,7 +384,6 @@ export default function ShopScreen() {
               </View>
             </View>
 
-            {/* Presets */}
             <Text style={s.presetsTitle}>Quick ranges</Text>
             <View style={s.presetsWrap}>
               {PRICE_PRESETS.map((p) => {
@@ -368,7 +400,6 @@ export default function ShopScreen() {
               })}
             </View>
 
-            {/* Actions */}
             <View style={s.sheetActions}>
               <Pressable style={s.btnClear} onPress={clearFilters}>
                 <Text style={s.btnClearText}>Clear</Text>
@@ -384,46 +415,92 @@ export default function ShopScreen() {
   );
 }
 
+// ── Sort/category pill constants ─────────────────────────────────────────────
+const PILL_H        = 32;   // fixed height for all pills — prevents layout shift
+const CAT_ROW_H     = 40;   // fixed height for category row — reserved even while loading
+
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#FAFAFA' },
+  screen: { flex: 1, backgroundColor: '#fff' },
 
   // Header
-  header:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 6, paddingBottom: 10 },
-  title:     { fontSize: 28, fontWeight: '800', color: colors.gray[900], letterSpacing: -0.5 },
+  header:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10 },
+  title:     { fontSize: 26, fontWeight: '800', color: colors.gray[900], letterSpacing: -0.5 },
   clearText: { fontSize: 14, fontWeight: '600', color: colors.brand },
 
   // Search
-  searchWrap: { paddingHorizontal: 16, paddingBottom: 10 },
+  searchWrap: { paddingHorizontal: 16, paddingBottom: 8 },
 
-  // Active filter pill
-  filterPillRow: { paddingHorizontal: 16, paddingBottom: 8 },
+  // Toolbar wrapper — rendered once, stable height
+  toolbar: { paddingBottom: 4 },
+
+  // Shared pill row (used for both sort + category rows)
+  pillRow: { paddingHorizontal: 16, gap: 6, alignItems: 'center' },
+
+  // ── Sort + Price pills ──────────────────────────────────────────────────────
+  pill: {
+    height: PILL_H,
+    paddingHorizontal: 13,
+    borderRadius: PILL_H / 2,
+    backgroundColor: colors.gray[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 4,
+  },
+  pillActive: {
+    backgroundColor: colors.gray[900],
+  },
+  pillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.gray[600],
+    lineHeight: PILL_H,   // prevents text from affecting chip height
+  },
+  pillTextActive: {
+    color: '#fff',
+  },
+
+  // Price filter pill variant (lives in same sort row)
   filterPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 5, alignSelf: 'flex-start',
-    backgroundColor: '#FEF2F4', borderWidth: 1, borderColor: '#FECDD3',
-    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5,
+    backgroundColor: colors.gray[100],
   },
-  filterPillText: { fontSize: 12, fontWeight: '600', color: colors.brand },
+  filterPillActive: {
+    backgroundColor: colors.brand,
+  },
 
-  // Sort chips
-  strip: { paddingHorizontal: 16, paddingBottom: 8, gap: 6 },
-  chip: {
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1, borderColor: colors.gray[200],
-    backgroundColor: '#fff',
+  // ── Category pills ──────────────────────────────────────────────────────────
+  catRowWrap: {
+    height: CAT_ROW_H,   // reserved height — prevents the jump when cats load
+    justifyContent: 'center',
+    marginTop: 4,
   },
-  chipOn:      { borderColor: colors.brand, backgroundColor: '#FEF2F4' },
-  chipLabel:   { fontSize: 13, fontWeight: '600', color: colors.gray[500] },
-  chipLabelOn: { color: colors.brand },
+  catPill: {
+    height: PILL_H,
+    paddingHorizontal: 13,
+    borderRadius: PILL_H / 2,
+    backgroundColor: colors.gray[100],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  catPillActive: {
+    backgroundColor: colors.gray[900],
+  },
+  catPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.gray[600],
+    lineHeight: PILL_H,
+  },
+  catPillTextActive: {
+    color: '#fff',
+  },
 
-  // Category chips
-  catStrip: { paddingHorizontal: 16, paddingBottom: 12, gap: 6 },
-  catChip: {
-    paddingHorizontal: 13, paddingVertical: 6,
-    borderRadius: 20, backgroundColor: colors.gray[100],
+  // Skeleton placeholder pills
+  catSkeleton: {
+    height: PILL_H,
+    borderRadius: PILL_H / 2,
+    backgroundColor: colors.gray[100],
   },
-  catChipOn:  { backgroundColor: colors.gray[900] },
-  catLabel:   { fontSize: 12, fontWeight: '600', color: colors.gray[600] },
-  catLabelOn: { color: '#fff' },
 
   // Loader / empty
   loader:     { flex: 1, alignItems: 'center', justifyContent: 'center' },
@@ -435,7 +512,7 @@ const s = StyleSheet.create({
 
   resultCount: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: 2, fontSize: 12, color: colors.gray[500] },
 
-  // Bottom sheet
+  // ── Bottom sheet ─────────────────────────────────────────────────────────────
   backdrop:   { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.45)' },
   sheetOuter: { position: 'absolute', bottom: 0, left: 0, right: 0 },
   sheet: {
@@ -451,21 +528,19 @@ const s = StyleSheet.create({
   sheetTitle: { fontSize: 20, fontWeight: '800', color: colors.gray[900] },
   sheetSub:   { fontSize: 13, color: colors.gray[500], marginTop: 3, marginBottom: 22 },
 
-  // Price inputs
-  inputRow:   { flexDirection: 'row', alignItems: 'center', gap: 0 },
-  inputGroup: { flex: 1 },
-  inputLabel: { fontSize: 11, fontWeight: '700', color: colors.gray[500], letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 },
+  inputRow:     { flexDirection: 'row', alignItems: 'center' },
+  inputGroup:   { flex: 1 },
+  inputLabel:   { fontSize: 11, fontWeight: '700', color: colors.gray[500], letterSpacing: 0.5, textTransform: 'uppercase', marginBottom: 6 },
   inputBox: {
     flexDirection: 'row', alignItems: 'center',
     borderWidth: 1.5, borderColor: colors.gray[200],
     borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11,
     backgroundColor: '#FAFAFA',
   },
-  inputPrefix: { fontSize: 15, fontWeight: '600', color: colors.gray[400], marginRight: 4 },
-  input:       { flex: 1, fontSize: 16, fontWeight: '600', color: colors.gray[900] },
-  inputDivider:{ width: 12 },
+  inputPrefix:  { fontSize: 15, fontWeight: '600', color: colors.gray[400], marginRight: 4 },
+  input:        { flex: 1, fontSize: 16, fontWeight: '600', color: colors.gray[900] },
+  inputDivider: { width: 12 },
 
-  // Presets
   presetsTitle: { fontSize: 13, fontWeight: '700', color: colors.gray[700], marginTop: 22, marginBottom: 10 },
   presetsWrap:  { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   preset: {
@@ -473,16 +548,14 @@ const s = StyleSheet.create({
     borderRadius: 20, borderWidth: 1, borderColor: colors.gray[200],
     backgroundColor: '#fff',
   },
-  presetOn:      { borderColor: colors.brand, backgroundColor: '#FEF2F4' },
-  presetLabel:   { fontSize: 13, fontWeight: '600', color: colors.gray[600] },
-  presetLabelOn: { color: colors.brand },
+  presetOn:       { borderColor: colors.brand, backgroundColor: '#FEF2F4' },
+  presetLabel:    { fontSize: 13, fontWeight: '600', color: colors.gray[600] },
+  presetLabelOn:  { color: colors.brand },
 
-  // Sheet actions
   sheetActions: { flexDirection: 'row', gap: 10, marginTop: 28 },
   btnClear: {
     flex: 1, paddingVertical: 15, borderRadius: 14,
-    borderWidth: 1.5, borderColor: colors.gray[200],
-    alignItems: 'center',
+    borderWidth: 1.5, borderColor: colors.gray[200], alignItems: 'center',
   },
   btnClearText: { fontSize: 15, fontWeight: '700', color: colors.gray[700] },
   btnApply: {
