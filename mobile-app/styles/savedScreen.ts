@@ -70,8 +70,9 @@ export const savedScreenStyles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     paddingHorizontal: 40,
+    paddingTop: 80,
   },
   emptyIcon: {
     marginBottom: 16,
