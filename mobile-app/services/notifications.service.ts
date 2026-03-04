@@ -9,6 +9,14 @@ export interface NotificationItem {
   message: string;
   type: string;
   read: boolean;
+  data?:
+    | {
+        orderId?: string;
+        route?: string;
+        productSlug?: string;
+        categorySlug?: string;
+      }
+    | null;
   createdAt: string;
 }
 
