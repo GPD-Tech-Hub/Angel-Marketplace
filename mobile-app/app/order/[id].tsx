@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Share, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useOrder } from '@/queries';
+import { useOrder, useLeaveReview } from '@/queries';
 import { OrderTimeline } from '@/components/orders';
+import { LeaveReviewModal } from '@/components/orders/LeaveReviewModal';
 import { Button, Card, Badge } from '@/components/ui';
 import { formatCurrency, formatOrderDate } from '@/utils';
 import { config } from '@/constants/config';
@@ -23,9 +24,21 @@ export default function OrderDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { data: order, isLoading, error, refetch } = useOrder(id);
+  const leaveReviewMutation = useLeaveReview();
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
 
   const copyTracking = async (trackingNumber: string) => {
     await Share.share({ message: trackingNumber, title: 'Tracking Number' });
+  };
+
+  const handleReviewSubmit = async (rating: number, comment: string) => {
+    if (!id) return;
+    try {
+      await leaveReviewMutation.mutateAsync({ orderId: id, rating, comment });
+      refetch();
+    } catch {
+      // modal stays open on error
+    }
   };
 
   if (isLoading) {
@@ -134,7 +147,7 @@ export default function OrderDetailScreen() {
         </Card>
 
         {/* Order Summary */}
-        <Card style={[s.card, { marginBottom: 32 }]}>
+        <Card style={[s.card, { marginBottom: 12 }]}>
           <Text style={s.sectionTitle}>Order Summary</Text>
           <View style={s.summaryRow}>
             <Text style={s.summaryLabel}>Subtotal</Text>
@@ -150,7 +163,31 @@ export default function OrderDetailScreen() {
             <Text style={s.totalValue}>{formatCurrency(order.total)}</Text>
           </View>
         </Card>
+
+        {/* Leave a Review — only for DELIVERED orders */}
+        {order.status === 'DELIVERED' && (
+          <TouchableOpacity
+            style={s.reviewButton}
+            onPress={() => setReviewModalVisible(true)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="star-outline" size={18} color="#FFFFFF" style={{ marginRight: 8 }} />
+            <Text style={s.reviewButtonText}>Leave a Review</Text>
+          </TouchableOpacity>
+        )}
+
+        <View style={{ height: 32 }} />
       </ScrollView>
+
+      <LeaveReviewModal
+        visible={reviewModalVisible}
+        onClose={() => setReviewModalVisible(false)}
+        onSubmit={(rating, comment) => {
+          handleReviewSubmit(rating, comment);
+          setReviewModalVisible(false);
+        }}
+        orderId={id}
+      />
     </>
   );
 }
@@ -181,4 +218,6 @@ const s = StyleSheet.create({
   summaryDivider:{ borderTopWidth: 1, borderTopColor: '#E5E7EB', marginTop: 10 },
   totalLabel:    { fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 8 },
   totalValue:    { fontSize: 16, fontWeight: '800', color: colors.brand, marginTop: 8 },
+  reviewButton:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.brand, borderRadius: 12, paddingVertical: 14, marginHorizontal: 16, marginBottom: 4 },
+  reviewButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
 });

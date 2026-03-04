@@ -296,8 +296,9 @@ const m = StyleSheet.create({
   // ── Results list ──
   listContent: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 40,
+    paddingTop: 16,
+    paddingBottom: 48,
+    gap: 12,
   },
 
   // Each result card
@@ -305,22 +306,23 @@ const m = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    marginBottom: 10,
+    borderRadius: 16,
     paddingHorizontal: 14,
-    paddingVertical: 14,
+    paddingVertical: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.brand,
   },
-  rowPressed: { opacity: 0.85 },
+  rowPressed: { opacity: 0.8 },
 
   // Square icon badge
   iconBox: {
-    width: 44,
-    height: 44,
+    width: 46,
+    height: 46,
     borderRadius: 12,
     backgroundColor: '#FFF0F3',
     alignItems: 'center',
@@ -336,15 +338,15 @@ const m = StyleSheet.create({
   },
   primary: {
     color: '#111827',
-    fontWeight: '600',
-    marginBottom: 3,
+    fontWeight: '700',
+    marginBottom: 4,
   },
   secondary: {
-    color: '#9CA3AF',
-    lineHeight: 18,
+    color: '#6B7280',
+    lineHeight: 19,
   },
 
-  sep: { height: 0 }, // cards have their own margin
+  sep: { height: 0 },
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────

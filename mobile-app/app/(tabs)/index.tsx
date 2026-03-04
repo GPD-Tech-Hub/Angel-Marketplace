@@ -17,6 +17,8 @@ import { useTrendingProducts } from '@/queries/useProducts';
 import { useAds } from '@/queries/useAds';
 import { config } from '@/constants/config';
 import { NewsletterCard } from '@/components/home/NewsletterCard';
+import { useCurrencyStore } from '@/store/currencyStore';
+import { sortByCurrency } from '@/utils';
 
 
 export default function HomeScreen() {
@@ -26,6 +28,7 @@ export default function HomeScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
 
+  const { currency } = useCurrencyStore();
   const { data: categories = [], isLoading: categoriesLoading, refetch: refetchCategories } = useCategories();
   const { data: trendingProducts = [], isLoading: trendingLoading, refetch: refetchTrending } = useTrendingProducts(10);
   const { data: ads = [], refetch: refetchAds } = useAds();
@@ -47,14 +50,16 @@ export default function HomeScreen() {
   }, [categories]);
 
   const trendingItems: TrendingProduct[] = useMemo(() => {
-    return trendingProducts.map((p: Product & { rating?: number }) => ({
+    const sorted = sortByCurrency(trendingProducts, currency.code);
+    return sorted.map((p: Product & { rating?: number }) => ({
       id: p.id,
       name: p.name,
       price: p.price,
+      prices: p.prices,
       rating: p.rating ?? 0,
       image: p.images?.[0] ? { uri: p.images[0] } : { uri: config.IMAGE_PLACEHOLDER },
     }));
-  }, [trendingProducts]);
+  }, [trendingProducts, currency.code]);
 
   return (
     <SafeAreaView style={styles.screen}>

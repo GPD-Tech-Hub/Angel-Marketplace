@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useProducts, useProductSearch, useCategories } from '@/queries';
+import { useCurrencyStore } from '@/store/currencyStore';
 import { DiscoverSearchBar } from '@/components/layout/DiscoverSearchBar';
 import { ProductGrid } from '@/components/products';
 import { colors } from '@/constants/colors';

@@ -19,7 +19,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useProduct, useAddCartItem, useCartQuery } from '@/queries';
 import { useCart, useFavorites } from '@/hooks';
 import { useAuthStore } from '@/store/authStore';
-import { formatCurrency, calculateDiscountPercentage } from '@/utils';
+import { formatCurrency, resolvePrice, calculateDiscountPercentage } from '@/utils';
+import { useCurrencyStore } from '@/store/currencyStore';
 import { config } from '@/constants/config';
 import { colors } from '@/constants/colors';
 
@@ -36,6 +37,7 @@ export default function ProductDetailScreen() {
   const { addToCart, isInCart: localIsInCart, getItemQuantity: localGetQty } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
   const addCartItemMutation = useAddCartItem();
+  const { currency } = useCurrencyStore();
 
   // API cart — only fetched when authenticated
   const { data: apiCart, refetch: refetchCart } = useCartQuery({ enabled: isAuthenticated });
@@ -273,10 +275,22 @@ export default function ProductDetailScreen() {
           )}
 
           <View style={s.priceRow}>
-            <Text style={s.price}>{formatCurrency(product.price)}</Text>
-            {hasDiscount && (
-              <Text style={s.comparePrice}>{formatCurrency(product.comparePrice!)}</Text>
-            )}
+            {(() => {
+              const { price: displayPrice, resolvedCurrency } = resolvePrice(product.prices, product.price, currency.code);
+              return (
+                <>
+                  <Text style={s.price}>{formatCurrency(displayPrice, resolvedCurrency)}</Text>
+                  {hasDiscount && (
+                    <Text style={s.comparePrice}>
+                      {formatCurrency(
+                        resolvePrice(product.prices, product.comparePrice!, currency.code).price,
+                        resolvedCurrency
+                      )}
+                    </Text>
+                  )}
+                </>
+              );
+            })()}
           </View>
 
           <View style={s.divider} />

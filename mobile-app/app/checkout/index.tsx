@@ -247,7 +247,7 @@ export default function CheckoutScreen() {
             Order Summary
           </Text>
         </View>
-        <OrderSummary subtotal={subtotal} shippingFee={SHIPPING_FEE} total={total} />
+        <OrderSummary subtotal={subtotal} shippingFee={SHIPPING_FEE} total={total} couponCode={couponCode} />
 
         {/* ── Coupon ── */}
         <CouponCodeInput onAdd={(code) => setCouponCode(code)} />

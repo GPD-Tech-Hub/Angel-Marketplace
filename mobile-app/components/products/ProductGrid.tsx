@@ -12,6 +12,8 @@ import {
 import { Product } from '@/types';
 import { ProductCard } from './ProductCard';
 import { colors } from '@/constants/colors';
+import { useCurrencyStore } from '@/store/currencyStore';
+import { sortByCurrency } from '@/utils';
 
 const SCREEN_W = Dimensions.get('window').width;
 const H_PAD    = 16;   // matches ProductCard's card width calculation
@@ -53,6 +55,8 @@ export function ProductGrid({
   refreshControl,
   ListEmptyComponent,
 }: ProductGridProps) {
+  const { currency } = useCurrencyStore();
+  const sortedProducts = sortByCurrency(products, currency.code);
 
   const renderItem = ({ item, index }: ListRenderItemInfo<Product>) => (
     <View style={[s.cell, index % NUM_COL !== 0 && { marginLeft: GAP }]}>
@@ -93,7 +97,7 @@ export function ProductGrid({
 
   return (
     <FlatList
-      data={products}
+      data={sortedProducts}
       renderItem={renderItem}
       keyExtractor={(item) => item.id}
       numColumns={NUM_COL}

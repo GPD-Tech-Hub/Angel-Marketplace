@@ -21,6 +21,7 @@ import { ShippingAddress } from '@/types';
 import { config } from '@/constants/config';
 import { colors } from '@/constants/colors';
 import { paymentService } from '@/services/payment.service';
+import { useCurrencyStore } from '@/store/currencyStore';
 
 const SHIPPING_FEE = 5;
 
@@ -45,6 +46,7 @@ export default function ConfirmScreen() {
   const createOrderMutation = useCreateOrder();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const [isProcessing, setIsProcessing] = useState(false);
+  const { currency } = useCurrencyStore();
 
   const shippingAddress: ShippingAddress | null = params.shippingAddress
     ? JSON.parse(params.shippingAddress)
@@ -65,6 +67,7 @@ export default function ConfirmScreen() {
       const order = await createOrderMutation.mutateAsync({
         shippingAddress,
         paymentMethod,
+        currencyCode: currency.code,
         ...(couponCode ? { couponCode } : {}),
       });
 
@@ -73,7 +76,7 @@ export default function ConfirmScreen() {
         const intent = await paymentService.createPaymentIntent({
           orderId: order.id,
           amount: order.total,
-          currency: config.CURRENCY,
+          currency: currency.code,
           provider: 'stripe',
         });
         if (!intent.clientSecret) {
@@ -109,7 +112,7 @@ export default function ConfirmScreen() {
         clearCart();
         Alert.alert(
           'Order Placed',
-          `Please transfer £${order.total.toFixed(2)} to:\n\nAngel Marketplace\nMonzo\nSort Code: 04-00-04\nAccount: 64689014\n\nYour order will be confirmed once we receive payment.`,
+          `Please transfer ${formatCurrency(order.total, currency.code)} to:\n\nAngel Marketplace\nMonzo\nSort Code: 04-00-04\nAccount: 64689014\n\nYour order will be confirmed once we receive payment.`,
           [
             {
               text: 'OK',
@@ -195,7 +198,7 @@ export default function ConfirmScreen() {
                 </Text>
               </View>
               <Text style={[localStyles.itemPrice, { fontSize: Math.round(14 * scale) }]}>
-                {formatCurrency(item.price * item.quantity)}
+                {formatCurrency(item.price * item.quantity, currency.code)}
               </Text>
             </View>
           ))}
@@ -259,13 +262,13 @@ export default function ConfirmScreen() {
           <View style={localStyles.totalRow}>
             <Text style={[localStyles.totalLabel, { fontSize: Math.round(14 * scale) }]}>Subtotal</Text>
             <Text style={[localStyles.totalValue, { fontSize: Math.round(14 * scale) }]}>
-              {formatCurrency(subtotal)}
+              {formatCurrency(subtotal, currency.code)}
             </Text>
           </View>
           <View style={localStyles.totalRow}>
             <Text style={[localStyles.totalLabel, { fontSize: Math.round(14 * scale) }]}>Shipping</Text>
             <Text style={[localStyles.totalValue, { fontSize: Math.round(14 * scale) }]}>
-              {formatCurrency(SHIPPING_FEE)}
+              {formatCurrency(SHIPPING_FEE, currency.code)}
             </Text>
           </View>
           {couponCode && (
@@ -281,7 +284,7 @@ export default function ConfirmScreen() {
           <View style={[localStyles.totalRow, localStyles.grandRow]}>
             <Text style={[localStyles.grandLabel, { fontSize: Math.round(15 * scale) }]}>Total</Text>
             <Text style={[localStyles.grandValue, { fontSize: Math.round(15 * scale) }]}>
-              {formatCurrency(total)}
+              {formatCurrency(total, currency.code)}
             </Text>
           </View>
         </View>
@@ -303,8 +306,8 @@ export default function ConfirmScreen() {
               ) : (
                 <Text style={[localStyles.placeButtonText, { fontSize: Math.round(16 * scale) }]}>
                   {paymentMethod === 'stripe'
-                    ? `Pay ${formatCurrency(total)}`
-                    : `Place Order — ${formatCurrency(total)}`}
+                    ? `Pay ${formatCurrency(total, currency.code)}`
+                    : `Place Order — ${formatCurrency(total, currency.code)}`}
                 </Text>
               )}
             </View>

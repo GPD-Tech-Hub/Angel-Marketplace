@@ -6,9 +6,11 @@ type Props = {
   subtotal: number;
   shippingFee?: number;
   total?: number;
+  /** Coupon code that has been applied — shows a green "Applied" line */
+  couponCode?: string;
 };
 
-export function OrderSummary({ subtotal, shippingFee = 5, total }: Props) {
+export function OrderSummary({ subtotal, shippingFee = 5, total, couponCode }: Props) {
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
 
@@ -41,6 +43,18 @@ export function OrderSummary({ subtotal, shippingFee = 5, total }: Props) {
           {shippingFee === 0 ? 'Free' : formatPrice(shippingFee)}
         </Text>
       </View>
+
+      {/* Coupon discount line */}
+      {couponCode ? (
+        <View style={styles.row}>
+          <Text style={[styles.label, { fontSize: Math.round(14 * scale) }]}>
+            Coupon ({couponCode})
+          </Text>
+          <Text style={[styles.discountValue, { fontSize: Math.round(14 * scale) }]}>
+            Applied
+          </Text>
+        </View>
+      ) : null}
 
       {/* Divider */}
       <View style={styles.divider} />

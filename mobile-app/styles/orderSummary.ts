@@ -38,4 +38,8 @@ export const orderSummaryStyles = StyleSheet.create({
     color: '#111827',
     fontWeight: '700',
   },
+  discountValue: {
+    color: '#22C55E',
+    fontWeight: '600',
+  },
 });

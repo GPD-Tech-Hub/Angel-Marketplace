@@ -23,7 +23,7 @@ export function ProductCard({ product, width = CARD_W }: ProductCardProps) {
   const router = useRouter();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { currency } = useCurrencyStore();
-  const displayPrice = resolvePrice(product.prices, product.price, currency.code);
+  const { price: displayPrice, resolvedCurrency } = resolvePrice(product.prices, product.price, currency.code);
   const isLiked      = isFavorite(product.id);
   const hasDiscount  = product.comparePrice && product.comparePrice > product.price;
   const discountPct  = hasDiscount
@@ -83,11 +83,11 @@ export function ProductCard({ product, width = CARD_W }: ProductCardProps) {
             {/* Price row */}
             <View style={s.priceRow}>
               <Text style={[s.price, outOfStock && s.priceMuted]}>
-                {formatCurrency(displayPrice, currency.code)}
+                {formatCurrency(displayPrice, resolvedCurrency)}
               </Text>
               {hasDiscount && (
                 <Text style={s.comparePrice}>
-                  {formatCurrency(product.comparePrice!, currency.code)}
+                  {formatCurrency(product.comparePrice!, resolvedCurrency)}
                 </Text>
               )}
             </View>
