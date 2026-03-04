@@ -53,7 +53,7 @@ export function TrendingProductCard({ item, style, onPress, onFavoritePress }: P
       {({ pressed }) => (
         <>
           <View style={[styles.imageWrap, { opacity: pressed ? 0.97 : 1 }]}>
-            <Image source={item.image} style={styles.image} contentFit="cover" />
+            <Image source={item.image} style={styles.image} contentFit="cover" cachePolicy="memory-disk" />
 
             <Pressable
               style={styles.favButton}
@@ -89,7 +89,7 @@ export function TrendingProductCard({ item, style, onPress, onFavoritePress }: P
           </Text>
 
           <View style={styles.metaRow}>
-            <Text style={styles.price}>${item.price}</Text>
+            <Text style={styles.price}>£{item.price}</Text>
             <View style={styles.ratingWrap}>
               <Ionicons name="star" size={starSize} color="#FBBF24" />
               <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>

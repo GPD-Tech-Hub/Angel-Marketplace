@@ -34,7 +34,7 @@ export function ProductImageBlock({ sources }: ProductImageBlockProps) {
   const renderSlide = useCallback(
     ({ item }: { item: ImageSourcePropType }) => (
       <View style={[styles.imageSlide, { width, height: galleryHeight }]}>
-        <Image source={item} style={styles.productImage} contentFit="contain" />
+        <Image source={item} style={styles.productImage} contentFit="contain" cachePolicy="memory-disk" />
       </View>
     ),
     [width, galleryHeight]

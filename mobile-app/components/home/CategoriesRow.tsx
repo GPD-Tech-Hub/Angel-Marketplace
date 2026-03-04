@@ -71,7 +71,7 @@ export function CategoriesRow({
             {({ pressed }) => (
               <>
                 <View style={[styles.iconCircle, dynamic.circle, { opacity: pressed ? 0.9 : 1 }]}>
-                  <Image source={item.image} style={[styles.iconImage, dynamic.icon]} contentFit="contain" />
+                  <Image source={item.image} style={[styles.iconImage, dynamic.icon]} contentFit="contain" cachePolicy="memory-disk" />
                 </View>
                 <Text style={[styles.itemLabel, dynamic.label]}>{item.label}</Text>
               </>

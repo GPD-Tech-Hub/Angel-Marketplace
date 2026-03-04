@@ -38,6 +38,7 @@ export function ProductCard({ product, variant = 'default' }: ProductCardProps) 
           source={{ uri: product.images[0] || config.IMAGE_PLACEHOLDER }}
           className="w-20 h-20 rounded-lg"
           contentFit="cover"
+          cachePolicy="memory-disk"
         />
         <View className="flex-1 ml-3">
           <Text className="text-sm font-medium text-gray-900" numberOfLines={2}>
