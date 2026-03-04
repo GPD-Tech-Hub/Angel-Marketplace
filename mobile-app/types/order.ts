@@ -48,6 +48,7 @@ export interface Order {
 export interface CreateOrderPayload {
   shippingAddress: ShippingAddress;
   paymentMethod: 'stripe' | 'paystack' | 'flutterwave';
+  couponCode?: string;
 }
 
 export interface OrderStatusUpdate {

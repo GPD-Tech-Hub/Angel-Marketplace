@@ -25,7 +25,8 @@ export default function MyDetailsScreen() {
   const updateProfile = useUpdateProfile();
 
   // Form state (synced from API)
-  const [fullName, setFullName] = useState<string>('');
+  const [firstName, setFirstName] = useState<string>('');
+  const [lastName, setLastName]   = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [dateOfBirth, setDateOfBirth] = useState<string>('');
   const [gender, setGender] = useState<string>('');
@@ -34,7 +35,8 @@ export default function MyDetailsScreen() {
 
   useEffect(() => {
     if (profile) {
-      setFullName([profile.firstName, profile.lastName].filter(Boolean).join(' ') || '');
+      setFirstName(profile.firstName || '');
+      setLastName(profile.lastName || '');
       setEmail(profile.email || '');
       setDateOfBirth(profile.dateOfBirth || '');
       setGender(profile.gender || '');
@@ -112,19 +114,18 @@ export default function MyDetailsScreen() {
   };
 
   // Check if form is valid (all editable fields filled)
-  const isFormValid = dateOfBirth.trim().length > 0 && 
+  const isFormValid = firstName.trim().length > 0 &&
+                      lastName.trim().length > 0 &&
+                      dateOfBirth.trim().length > 0 && 
                       gender.trim().length > 0 && 
                       phoneNumber.trim().length > 0;
 
   const handleSave = async () => {
     if (!isFormValid) return;
-    const names = fullName.trim().split(/\s+/);
-    const firstName = names[0] || '';
-    const lastName = names.slice(1).join(' ') || '';
     try {
       await updateProfile.mutateAsync({
-        firstName: firstName || undefined,
-        lastName: lastName || undefined,
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
         phone: `${selectedCountryCode.code} ${phoneNumber}`.trim() || undefined,
         dateOfBirth: dateOfBirth || undefined,
         gender: gender || undefined,
@@ -185,17 +186,33 @@ export default function MyDetailsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Full Name Field - Non-editable */}
+        {/* First Name Field */}
         <View style={styles.fieldContainer}>
           <Text style={[styles.fieldLabel, { fontSize: Math.round(14 * scale) }]}>
-            Full Name
+            First Name
           </Text>
           <TextInput
-            style={[styles.textInput, styles.textInputDisabled, { fontSize: Math.round(14 * scale) }]}
-            placeholder=""
+            style={[styles.textInput, { fontSize: Math.round(14 * scale) }]}
+            placeholder="First name"
             placeholderTextColor="#9CA3AF"
-            value={fullName}
-            editable={false}
+            value={firstName}
+            onChangeText={setFirstName}
+            autoCapitalize="words"
+          />
+        </View>
+
+        {/* Last Name Field */}
+        <View style={styles.fieldContainer}>
+          <Text style={[styles.fieldLabel, { fontSize: Math.round(14 * scale) }]}>
+            Last Name
+          </Text>
+          <TextInput
+            style={[styles.textInput, { fontSize: Math.round(14 * scale) }]}
+            placeholder="Last name"
+            placeholderTextColor="#9CA3AF"
+            value={lastName}
+            onChangeText={setLastName}
+            autoCapitalize="words"
           />
         </View>
 

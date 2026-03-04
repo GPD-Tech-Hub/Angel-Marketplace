@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, Pressable, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, useWindowDimensions, Alert } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { CartItem } from '@/types';
 import { useCart } from '@/hooks';
 import { cartItemCardStyles as styles } from '@/styles/cartItemCard';
@@ -20,12 +21,34 @@ export function CartItemCard({ item, onIncrement, onDecrement, onRemove }: Props
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
   const storeCart = useCart();
+  const router = useRouter();
   const { product, quantity, price } = item;
 
   const useApi = !!onIncrement;
   const increment = useApi ? () => onIncrement(item) : () => storeCart.increment(item.productId);
   const decrement = useApi ? () => onDecrement!(item) : () => storeCart.decrement(item.productId);
-  const removeFromCart = useApi ? () => onRemove!(item) : () => storeCart.removeFromCart(item.productId);
+
+  const handleRemove = () => {
+    Alert.alert(
+      'Remove Item',
+      `Remove "${product.name}" from your cart?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () =>
+            useApi ? onRemove!(item) : storeCart.removeFromCart(item.productId),
+        },
+      ]
+    );
+  };
+
+  const handleProductPress = () => {
+    if (product.slug) {
+      router.push({ pathname: '/product/[slug]', params: { slug: product.slug } } as any);
+    }
+  };
 
   // Resolve image — images are already full URLs from the backend
   const imageUri =
@@ -34,94 +57,93 @@ export function CartItemCard({ item, onIncrement, onDecrement, onRemove }: Props
       : (product as any).image ?? config.IMAGE_PLACEHOLDER;
   const productImage = typeof imageUri === 'string' ? { uri: imageUri } : imageUri;
 
-  // Use real size/color from cart item if available
-  const size = (item as any).size as string | undefined;
-  const color = (item as any).color as string | undefined;
-  const sizeLabel = size ? `Size ${size}` : color ? `Colour: ${color}` : null;
+  const size = item.size as string | undefined;
+  const color = item.color as string | undefined;
+  const variantLabel = size ? `Size: ${size}` : color ? `Colour: ${color}` : null;
 
   const formatPrice = (p: number) =>
     `£${p.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <View style={styles.card}>
-      {/* Product Image */}
-      <View style={styles.imageContainer}>
-        <Image
-          source={productImage}
-          style={styles.image}
-          contentFit="cover"
-          cachePolicy="memory-disk"
-        />
-      </View>
+      {/* Tappable image → product page */}
+      <Pressable onPress={handleProductPress} style={styles.imageContainer}>
+        {({ pressed }) => (
+          <Image
+            source={productImage}
+            style={[styles.image, { opacity: pressed ? 0.85 : 1 }]}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+          />
+        )}
+      </Pressable>
 
-      {/* Product Details */}
+      {/* Product details */}
       <View style={styles.detailsContainer}>
-        <Text style={[styles.productName, { fontSize: Math.round(16 * scale) }]} numberOfLines={2}>
-          {product.name}
-        </Text>
+        {/* Tappable name → product page */}
+        <Pressable onPress={handleProductPress}>
+          {({ pressed }) => (
+            <Text
+              style={[styles.productName, { fontSize: Math.round(15 * scale), opacity: pressed ? 0.7 : 1 }]}
+              numberOfLines={2}
+            >
+              {product.name}
+            </Text>
+          )}
+        </Pressable>
 
-        {sizeLabel ? (
-          <Text style={[styles.sizeText, { fontSize: Math.round(13 * scale) }]}>
-            {sizeLabel}
+        {variantLabel ? (
+          <Text style={[styles.variantText, { fontSize: Math.round(12 * scale) }]}>
+            {variantLabel}
           </Text>
         ) : null}
 
-        {/* Price and Quantity Controls Row */}
-        <View style={styles.priceQuantityRow}>
-          <Text style={[styles.priceText, { fontSize: Math.round(16 * scale) }]}>
-            {formatPrice(price)}
-          </Text>
+        <Text style={[styles.priceText, { fontSize: Math.round(16 * scale) }]}>
+          {formatPrice(price)}
+        </Text>
 
+        {/* Quantity stepper */}
+        <View style={styles.bottomRow}>
           <View style={styles.quantityContainer}>
-            <Pressable
-              style={styles.quantityButton}
-              onPress={decrement}
-              hitSlop={10}
-            >
+            <Pressable style={styles.quantityButton} onPress={decrement} hitSlop={8}>
               {({ pressed }) => (
                 <Ionicons
-                  name="remove"
-                  size={Math.round(16 * scale)}
-                  color={colors.gray[900]}
-                  style={{ opacity: pressed ? 0.7 : 1 }}
+                  name={quantity <= 1 ? 'trash-outline' : 'remove'}
+                  size={Math.round(15 * scale)}
+                  color={quantity <= 1 ? colors.brand : colors.gray[700]}
+                  style={{ opacity: pressed ? 0.6 : 1 }}
                 />
               )}
             </Pressable>
-            <View style={styles.quantityDivider} />
-            <Text style={[styles.quantityText, { fontSize: Math.round(16 * scale) }]}>
+            <Text style={[styles.quantityText, { fontSize: Math.round(15 * scale) }]}>
               {quantity}
             </Text>
-            <View style={styles.quantityDivider} />
-            <Pressable
-              style={styles.quantityButton}
-              onPress={increment}
-              hitSlop={10}
-            >
+            <Pressable style={styles.quantityButton} onPress={increment} hitSlop={8}>
               {({ pressed }) => (
                 <Ionicons
                   name="add"
-                  size={Math.round(16 * scale)}
-                  color={colors.gray[900]}
-                  style={{ opacity: pressed ? 0.7 : 1 }}
+                  size={Math.round(15 * scale)}
+                  color={colors.brand}
+                  style={{ opacity: pressed ? 0.6 : 1 }}
                 />
               )}
             </Pressable>
           </View>
+
+          <Text style={[styles.itemTotal, { fontSize: Math.round(15 * scale) }]}>
+            {formatPrice(price * quantity)}
+          </Text>
         </View>
       </View>
 
-      {/* Delete Button */}
-      <Pressable
-        style={styles.deleteButton}
-        onPress={removeFromCart}
-        hitSlop={10}
-      >
+      {/* Delete button */}
+      <Pressable style={styles.deleteButton} onPress={handleRemove} hitSlop={10}>
         {({ pressed }) => (
           <Ionicons
-            name="trash-outline"
-            size={Math.round(20 * scale)}
-            color={colors.error}
-            style={{ opacity: pressed ? 0.7 : 1 }}
+            name="close"
+            size={Math.round(18 * scale)}
+            color={colors.gray[400]}
+            style={{ opacity: pressed ? 0.5 : 1 }}
           />
         )}
       </Pressable>

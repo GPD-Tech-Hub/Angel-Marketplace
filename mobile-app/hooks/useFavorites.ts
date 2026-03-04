@@ -14,7 +14,7 @@ export function useFavorites() {
 
   // API hooks (only active when authenticated)
   const { data: apiFavoritesRaw } = useFavoritesQuery({ enabled: isAuthenticated });
-  const apiFavorites = apiFavoritesRaw ?? [];
+  const apiFavorites = Array.isArray(apiFavoritesRaw) ? apiFavoritesRaw : [];
   const addFavMutation = useAddFavorite();
   const removeFavMutation = useRemoveFavorite();
 
@@ -33,11 +33,12 @@ export function useFavorites() {
   const isFavorite = useCallback(
     (productId: string) => {
       if (isAuthenticated) {
-        return apiFavorites.some((p) => p.id === productId);
+        const list = apiFavoritesRaw ?? [];
+        return Array.isArray(list) ? list.some((p) => p.id === productId) : false;
       }
       return localIsFavorite(productId);
     },
-    [isAuthenticated, apiFavorites, localIsFavorite]
+    [isAuthenticated, apiFavoritesRaw, localIsFavorite]
   );
 
   const addFavorite = useCallback(

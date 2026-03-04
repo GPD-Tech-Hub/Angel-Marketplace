@@ -2,41 +2,46 @@ import { StyleSheet } from 'react-native';
 
 export const categoriesRowStyles = StyleSheet.create({
   container: {
-    marginTop: 12,
+    marginTop: 24,
+    marginBottom: 8,
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 14,
   },
   title: {
     fontSize: 18,
-    fontWeight: '600',
-    color: '#000000',
+    fontWeight: '700',
+    color: '#111827',
+    letterSpacing: -0.2,
   },
   viewAllWrap: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   viewAllText: {
     fontSize: 13,
-    color: '#737373',
-    marginRight: 6,
+    fontWeight: '500',
+    color: '#6B7280',
   },
-  itemsRow: {
+  scrollContent: {
+    paddingRight: 8,
+    gap: 16,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   item: {
     alignItems: 'center',
-    width: 70,
+    width: 68,
   },
   iconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#EEF5FF',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#FFF0F3',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
@@ -46,8 +51,10 @@ export const categoriesRowStyles = StyleSheet.create({
     height: 32,
   },
   itemLabel: {
-    fontSize: 14,
-    color: '#737373',
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#374151',
+    textAlign: 'center',
+    lineHeight: 15,
   },
 });
-

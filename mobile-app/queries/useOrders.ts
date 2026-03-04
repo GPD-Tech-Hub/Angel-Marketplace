@@ -65,10 +65,21 @@ export function useCancelOrder() {
   return useMutation({
     mutationFn: (orderId: string) => ordersService.cancelOrder(orderId),
     onSuccess: (updatedOrder) => {
-      // Update the order in cache
       queryClient.setQueryData(orderKeys.detail(updatedOrder.id), updatedOrder);
-      // Invalidate orders list
       queryClient.invalidateQueries({ queryKey: orderKeys.lists() });
+    },
+  });
+}
+
+// Leave a review mutation
+export function useLeaveReview() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ orderId, rating, comment }: { orderId: string; rating: number; comment: string }) =>
+      ordersService.leaveReview(orderId, rating, comment),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: orderKeys.detail(variables.orderId) });
     },
   });
 }

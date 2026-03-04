@@ -12,7 +12,11 @@ export function useFavoritesQuery(options?: { enabled?: boolean }) {
     queryKey: FAVORITES_KEY,
     queryFn: async () => {
       const res = await api.get(ENDPOINTS.FAVORITES.LIST);
-      return res.data.data ?? [];
+      // Backend returns { products: [...] }
+      const raw = res.data.data;
+      if (Array.isArray(raw)) return raw;
+      if (raw && Array.isArray(raw.products)) return raw.products;
+      return [];
     },
     staleTime: 1000 * 60 * 5,
     enabled: options?.enabled !== false,

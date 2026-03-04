@@ -17,6 +17,7 @@ import { useCategories } from '@/queries/useCategories';
 import { useTrendingProducts } from '@/queries/useProducts';
 import { useAds } from '@/queries/useAds';
 import { config } from '@/constants/config';
+import { NewsletterCard } from '@/components/home/NewsletterCard';
 
 
 export default function HomeScreen() {
@@ -106,6 +107,9 @@ export default function HomeScreen() {
 
           {/* Ad banner — fetched from API, falls back to nothing while loading */}
           <HomeBanner ads={ads} />
+
+          {/* Newsletter opt-in */}
+          <NewsletterCard />
 
           {trendingLoading ? (
             <View style={{ paddingVertical: 24, alignItems: 'center' }}>

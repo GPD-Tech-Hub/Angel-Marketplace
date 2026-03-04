@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, Pressable, useWindowDimensions, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -15,8 +15,6 @@ import { colors } from '@/constants/colors';
 export default function CartScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
-  const scale = Math.max(0.9, Math.min(1.0, width / 390));
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { data: apiCart, isLoading: cartLoading, refetch } = useCartQuery({ enabled: isAuthenticated });
@@ -29,11 +27,7 @@ export default function CartScreen() {
   const onRefresh = useCallback(async () => {
     if (!isAuthenticated) return;
     setRefreshing(true);
-    try {
-      await refetch();
-    } finally {
-      setRefreshing(false);
-    }
+    try { await refetch(); } finally { setRefreshing(false); }
   }, [isAuthenticated, refetch]);
 
   const useApiCart = isAuthenticated && apiCart;
@@ -42,17 +36,17 @@ export default function CartScreen() {
     ? (apiCart.items ?? []).reduce((sum, i) => sum + i.price * i.quantity, 0)
     : storeSubtotal;
 
-  const handleApiIncrement = (item: CartItem) => {
+  const handleApiIncrement = (item: CartItem) =>
     updateCartItem.mutate({ itemId: item.id, payload: { quantity: item.quantity + 1 } });
-  };
+
   const handleApiDecrement = (item: CartItem) => {
     if (item.quantity <= 1) removeCartItem.mutate(item.id);
     else updateCartItem.mutate({ itemId: item.id, payload: { quantity: item.quantity - 1 } });
   };
+
+  // Removal confirmation is handled inside CartItemCard via Alert
   const handleApiRemove = (item: CartItem) => removeCartItem.mutate(item.id);
 
-  const handleCheckout = () => router.push('/checkout');
-  // Shipping fee matches the value stored in the settings table (£5)
   const SHIPPING_FEE = 5;
   const total = subtotal + SHIPPING_FEE;
 
@@ -60,48 +54,44 @@ export default function CartScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-          hitSlop={10}
-        >
+        <Pressable style={styles.backButton} onPress={() => router.back()} hitSlop={10}>
           {({ pressed }) => (
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color={colors.gray[900]}
-              style={{ opacity: pressed ? 0.7 : 1 }}
-            />
+            <Ionicons name="chevron-back" size={22} color={colors.gray[900]} style={{ opacity: pressed ? 0.6 : 1 }} />
           )}
         </Pressable>
-        <Text style={[styles.headerTitle, { fontSize: Math.round(20 * scale) }]}>
-          My Cart
-        </Text>
-        <View style={styles.headerSpacer} />
+
+        <Text style={styles.headerTitle}>My Cart</Text>
+
+        {items.length > 0 ? (
+          <View style={styles.headerBadge}>
+            <Text style={styles.headerBadgeText}>{items.length}</Text>
+          </View>
+        ) : (
+          <View style={styles.headerSpacer} />
+        )}
       </View>
 
-      {/* Scrollable Content */}
+      {/* Content */}
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           isAuthenticated ? (
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.brand}
-              colors={[colors.brand]}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} colors={[colors.brand]} />
           ) : undefined
         }
       >
         {cartLoading && isAuthenticated && !refreshing ? (
-          <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+          <View style={{ paddingVertical: 60, alignItems: 'center' }}>
             <ActivityIndicator size="large" color={colors.brand} />
           </View>
         ) : items.length > 0 ? (
           <>
+            <Text style={styles.sectionLabel}>
+              {items.length} {items.length === 1 ? 'item' : 'items'}
+            </Text>
+
             {items.map((item) => (
               <CartItemCard
                 key={item.id}
@@ -114,32 +104,28 @@ export default function CartScreen() {
               />
             ))}
 
-            {/* Order Summary */}
-            <OrderSummary
-              subtotal={subtotal}
-              shippingFee={SHIPPING_FEE}
-              total={total}
-            />
-
-            {/* Checkout Button */}
-            <CheckoutButton onPress={handleCheckout} />
-
-            {/* Bottom spacing for safe area */}
+            <OrderSummary subtotal={subtotal} shippingFee={SHIPPING_FEE} total={total} />
+            <CheckoutButton onPress={() => router.push('/checkout')} />
             <View style={{ height: Math.max(insets.bottom, 20) + 80 }} />
           </>
         ) : (
           <View style={styles.emptyContainer}>
             <Image
               source={require('../../assets/icons/Cart-duotone.png')}
-              style={[styles.emptyIcon, { width: Math.round(100 * scale), height: Math.round(100 * scale) }]}
+              style={[styles.emptyIcon, { width: 100, height: 100 }]}
               contentFit="contain"
             />
-            <Text style={[styles.emptyTitle, { fontSize: Math.round(20 * scale) }]}>
-              Your cart is empty
-            </Text>
-            <Text style={[styles.emptyMessage, { fontSize: Math.round(14 * scale) }]}>
+            <Text style={styles.emptyTitle}>Your cart is empty</Text>
+            <Text style={styles.emptyMessage}>
               {"When you add products,\nthey'll appear here."}
             </Text>
+            <Pressable style={styles.emptyShopBtn} onPress={() => router.push('/(tabs)/categories' as any)}>
+              {({ pressed }) => (
+                <Text style={[styles.emptyShopBtnText, { opacity: pressed ? 0.8 : 1 }]}>
+                  Start Shopping
+                </Text>
+              )}
+            </Pressable>
           </View>
         )}
       </ScrollView>

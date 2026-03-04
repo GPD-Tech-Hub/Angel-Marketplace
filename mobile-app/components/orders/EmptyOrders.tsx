@@ -1,7 +1,8 @@
 import { colors } from '@/constants/colors';
 import React from 'react';
-import { View, Text, useWindowDimensions } from 'react-native';
+import { View, Text, Pressable, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { emptyOrdersStyles as styles } from '@/styles/emptyOrders';
 
 interface EmptyOrdersProps {
@@ -10,6 +11,7 @@ interface EmptyOrdersProps {
 
 export function EmptyOrders({ status }: EmptyOrdersProps) {
   const { width } = useWindowDimensions();
+  const router = useRouter();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
 
   const title = status === 'ongoing' ? 'No Ongoing Orders!' : 'No Completed Orders!';
@@ -35,6 +37,14 @@ export function EmptyOrders({ status }: EmptyOrdersProps) {
       <Text style={[styles.description, { fontSize: Math.round(14 * scale) }]}>
         {description}
       </Text>
+      {status === 'ongoing' && (
+        <Pressable
+          onPress={() => router.push('/(tabs)' as any)}
+          style={{ marginTop: 20, backgroundColor: colors.brand, paddingHorizontal: 28, paddingVertical: 13, borderRadius: 14 }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: Math.round(15 * scale) }}>Start Shopping</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

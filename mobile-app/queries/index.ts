@@ -7,3 +7,4 @@ export * from './useNotifications';
 export * from './useStripeConfig';
 export * from './useCart';
 export * from './useAds';
+export * from './useFavorites';

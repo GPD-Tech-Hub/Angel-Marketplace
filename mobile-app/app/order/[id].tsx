@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, Share, StyleSheet } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
@@ -8,14 +8,15 @@ import { OrderTimeline } from '@/components/orders';
 import { Button, Card, Badge } from '@/components/ui';
 import { formatCurrency, formatOrderDate } from '@/utils';
 import { config } from '@/constants/config';
+import { colors } from '@/constants/colors';
 
 const statusConfig = {
-  PENDING: { label: 'Pending', variant: 'warning' as const },
-  CONFIRMED: { label: 'Confirmed', variant: 'primary' as const },
-  PROCESSING: { label: 'Processing', variant: 'primary' as const },
-  SHIPPED: { label: 'Shipped', variant: 'primary' as const },
-  DELIVERED: { label: 'Delivered', variant: 'success' as const },
-  CANCELLED: { label: 'Cancelled', variant: 'error' as const },
+  PENDING:    { label: 'Pending',    variant: 'warning'  as const },
+  CONFIRMED:  { label: 'Confirmed',  variant: 'primary'  as const },
+  PROCESSING: { label: 'Processing', variant: 'primary'  as const },
+  SHIPPED:    { label: 'Shipped',    variant: 'primary'  as const },
+  DELIVERED:  { label: 'Delivered',  variant: 'success'  as const },
+  CANCELLED:  { label: 'Cancelled',  variant: 'error'    as const },
 };
 
 export default function OrderDetailScreen() {
@@ -23,27 +24,29 @@ export default function OrderDetailScreen() {
   const router = useRouter();
   const { data: order, isLoading, error, refetch } = useOrder(id);
 
+  const copyTracking = async (trackingNumber: string) => {
+    await Share.share({ message: trackingNumber, title: 'Tracking Number' });
+  };
+
   if (isLoading) {
     return (
-      <View className="flex-1 bg-gray-50 items-center justify-center">
-        <ActivityIndicator size="large" color="#0ea5e9" />
+      <View style={s.center}>
+        <ActivityIndicator size="large" color={colors.brand} />
       </View>
     );
   }
 
   if (error || !order) {
     return (
-      <View className="flex-1 bg-gray-50 items-center justify-center px-6">
-        <Ionicons name="alert-circle-outline" size={48} color="#ef4444" />
-        <Text className="text-gray-600 text-center mt-4">
-          Failed to load order details
-        </Text>
-        <Button title="Try Again" onPress={() => refetch()} className="mt-4" />
+      <View style={[s.center, { paddingHorizontal: 24 }]}>
+        <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+        <Text style={s.errorText}>Failed to load order details</Text>
+        <Button title="Try Again" onPress={() => refetch()} />
       </View>
     );
   }
 
-  const { label, variant } = statusConfig[order.status];
+  const { label, variant } = statusConfig[order.status] ?? { label: order.status, variant: 'primary' as const };
 
   return (
     <>
@@ -52,26 +55,23 @@ export default function OrderDetailScreen() {
           headerShown: true,
           title: `Order #${order.orderNumber}`,
           headerBackTitle: 'Back',
+          headerTintColor: colors.brand,
         }}
       />
-      <ScrollView className="flex-1 bg-gray-50 px-4 pt-4">
+      <ScrollView style={s.scroll} contentContainerStyle={s.scrollContent}>
         {/* Order Header */}
-        <Card className="mb-4">
-          <View className="flex-row items-center justify-between">
+        <Card style={s.card}>
+          <View style={s.row}>
             <View>
-              <Text className="text-sm text-gray-500">
-                {formatOrderDate(order.createdAt)}
-              </Text>
-              <Text className="text-lg font-semibold text-gray-900">
-                #{order.orderNumber}
-              </Text>
+              <Text style={s.dateText}>{formatOrderDate(order.createdAt)}</Text>
+              <Text style={s.orderNumber}>#{order.orderNumber}</Text>
             </View>
             <Badge label={label} variant={variant} />
           </View>
         </Card>
 
         {/* Order Timeline */}
-        <View className="mb-4">
+        <View style={s.card}>
           <OrderTimeline
             currentStatus={order.status}
             createdAt={order.createdAt}
@@ -81,100 +81,104 @@ export default function OrderDetailScreen() {
 
         {/* Tracking Info */}
         {order.trackingNumber && (
-          <Card className="mb-4">
-            <View className="flex-row items-center">
-              <Ionicons name="airplane-outline" size={20} color="#0ea5e9" />
-              <Text className="text-base font-semibold text-gray-900 ml-2">
-                Tracking
-              </Text>
+          <Card style={s.card}>
+            <View style={s.row}>
+              <Ionicons name="airplane-outline" size={20} color={colors.brand} />
+              <Text style={s.sectionTitle}>Tracking</Text>
             </View>
-            <TouchableOpacity className="mt-2 flex-row items-center">
-              <Text className="text-primary-600 font-medium">
-                {order.trackingNumber}
-              </Text>
-              <Ionicons name="copy-outline" size={16} color="#0ea5e9" className="ml-2" />
+            <TouchableOpacity style={s.trackingRow} onPress={() => copyTracking(order.trackingNumber!)}>
+              <Text style={s.trackingNumber}>{order.trackingNumber}</Text>
+              <Ionicons name="copy-outline" size={16} color={colors.brand} style={{ marginLeft: 6 }} />
             </TouchableOpacity>
           </Card>
         )}
 
         {/* Order Items */}
-        <Card className="mb-4">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">
-            Items ({order.items.length})
-          </Text>
-          {order.items.map((item) => (
+        <Card style={s.card}>
+          <Text style={s.sectionTitle}>Items ({order.items.length})</Text>
+          {order.items.map((item, idx) => (
             <TouchableOpacity
               key={item.id}
-              className="flex-row items-center py-3 border-b border-gray-100 last:border-b-0"
-              onPress={() => router.push(`/product/${item.product.slug}`)}
+              style={[s.itemRow, idx < order.items.length - 1 && s.itemRowBorder]}
+              onPress={() => router.push(`/product/${item.product.slug}` as any)}
             >
               <Image
                 source={{ uri: item.product.images[0] || config.IMAGE_PLACEHOLDER }}
-                className="w-16 h-16 rounded-lg"
+                style={s.itemImage}
                 contentFit="cover"
               />
-              <View className="flex-1 ml-3">
-                <Text className="text-sm font-medium text-gray-900" numberOfLines={1}>
-                  {item.product.name}
-                </Text>
-                <Text className="text-sm text-gray-500">
-                  {formatCurrency(item.price)} x {item.quantity}
-                </Text>
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={s.itemName} numberOfLines={1}>{item.product.name}</Text>
+                <Text style={s.itemMeta}>{formatCurrency(item.price)} × {item.quantity}</Text>
               </View>
-              <Text className="font-semibold text-gray-900">
-                {formatCurrency(item.price * item.quantity)}
-              </Text>
+              <Text style={s.itemTotal}>{formatCurrency(item.price * item.quantity)}</Text>
             </TouchableOpacity>
           ))}
         </Card>
 
         {/* Shipping Address */}
-        <Card className="mb-4">
-          <View className="flex-row items-center mb-3">
-            <Ionicons name="location-outline" size={20} color="#0ea5e9" />
-            <Text className="text-lg font-semibold text-gray-900 ml-2">
-              Shipping Address
-            </Text>
+        <Card style={s.card}>
+          <View style={s.row}>
+            <Ionicons name="location-outline" size={20} color={colors.brand} />
+            <Text style={s.sectionTitle}>Shipping Address</Text>
           </View>
-          <Text className="text-gray-900">
-            {order.shippingAddress.firstName} {order.shippingAddress.lastName}
-          </Text>
-          <Text className="text-gray-600">
+          <Text style={s.addrName}>{order.shippingAddress.firstName} {order.shippingAddress.lastName}</Text>
+          <Text style={s.addrLine}>
             {order.shippingAddress.address}
-            {order.shippingAddress.apartment && `, ${order.shippingAddress.apartment}`}
+            {order.shippingAddress.apartment ? `, ${order.shippingAddress.apartment}` : ''}
           </Text>
-          <Text className="text-gray-600">
-            {order.shippingAddress.city}, {order.shippingAddress.state}{' '}
-            {order.shippingAddress.zipCode}
+          <Text style={s.addrLine}>
+            {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.zipCode}
           </Text>
-          <Text className="text-gray-600">{order.shippingAddress.country}</Text>
+          <Text style={s.addrLine}>{order.shippingAddress.country}</Text>
         </Card>
 
         {/* Order Summary */}
-        <Card className="mb-8">
-          <Text className="text-lg font-semibold text-gray-900 mb-3">
-            Order Summary
-          </Text>
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-gray-600">Subtotal</Text>
-            <Text className="text-gray-900">{formatCurrency(order.subtotal)}</Text>
+        <Card style={[s.card, { marginBottom: 32 }]}>
+          <Text style={s.sectionTitle}>Order Summary</Text>
+          <View style={s.summaryRow}>
+            <Text style={s.summaryLabel}>Subtotal</Text>
+            <Text style={s.summaryValue}>{formatCurrency(order.subtotal)}</Text>
           </View>
-          <View className="flex-row justify-between mb-2">
-            <Text className="text-gray-600">Shipping</Text>
-            <Text className="text-gray-900">
-              {order.shipping > 0 ? formatCurrency(order.shipping) : 'Free'}
-            </Text>
+          <View style={s.summaryRow}>
+            <Text style={s.summaryLabel}>Shipping</Text>
+            <Text style={s.summaryValue}>{order.shipping > 0 ? formatCurrency(order.shipping) : 'Free'}</Text>
           </View>
-          <View className="border-t border-gray-200 mt-2 pt-3">
-            <View className="flex-row justify-between">
-              <Text className="text-lg font-semibold text-gray-900">Total</Text>
-              <Text className="text-lg font-bold text-primary-600">
-                {formatCurrency(order.total)}
-              </Text>
-            </View>
+          <View style={s.summaryDivider} />
+          <View style={s.summaryRow}>
+            <Text style={s.totalLabel}>Total</Text>
+            <Text style={s.totalValue}>{formatCurrency(order.total)}</Text>
           </View>
         </Card>
       </ScrollView>
     </>
   );
 }
+
+const s = StyleSheet.create({
+  scroll:        { flex: 1, backgroundColor: '#F9FAFB' },
+  scrollContent: { paddingHorizontal: 16, paddingTop: 16 },
+  center:        { flex: 1, backgroundColor: '#F9FAFB', alignItems: 'center', justifyContent: 'center' },
+  errorText:     { color: '#6B7280', textAlign: 'center', marginTop: 12, marginBottom: 16 },
+  card:          { marginBottom: 12 },
+  row:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  dateText:      { fontSize: 13, color: '#6B7280' },
+  orderNumber:   { fontSize: 17, fontWeight: '700', color: '#111827', marginTop: 2 },
+  sectionTitle:  { fontSize: 15, fontWeight: '700', color: '#111827', marginLeft: 8, flex: 1 },
+  trackingRow:   { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  trackingNumber:{ fontSize: 14, fontWeight: '600', color: colors.brand },
+  itemRow:       { flexDirection: 'row', alignItems: 'center', paddingVertical: 12 },
+  itemRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  itemImage:     { width: 64, height: 64, borderRadius: 10 },
+  itemName:      { fontSize: 13, fontWeight: '600', color: '#111827' },
+  itemMeta:      { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  itemTotal:     { fontSize: 14, fontWeight: '700', color: '#111827' },
+  addrName:      { fontSize: 14, fontWeight: '600', color: '#111827', marginTop: 8 },
+  addrLine:      { fontSize: 13, color: '#6B7280', marginTop: 2 },
+  summaryRow:    { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  summaryLabel:  { fontSize: 14, color: '#6B7280' },
+  summaryValue:  { fontSize: 14, color: '#111827' },
+  summaryDivider:{ borderTopWidth: 1, borderTopColor: '#E5E7EB', marginTop: 10 },
+  totalLabel:    { fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 8 },
+  totalValue:    { fontSize: 16, fontWeight: '800', color: colors.brand, marginTop: 8 },
+});

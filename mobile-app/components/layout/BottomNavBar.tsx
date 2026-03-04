@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Pressable, useWindowDimensions, Image } from 'react-native';
+import { View, Text, Pressable, Image } from 'react-native';
 import { useRouter, useSegments } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { bottomNavBarStyles as styles } from '@/styles/bottomNavBar';
@@ -20,10 +20,10 @@ const tabs: TabItem[] = [
     icon: require('../../assets/icons/home.png'),
   },
   {
-    key: 'search',
-    label: 'Search',
-    route: '/(tabs)/search',
-    icon: require('../../assets/icons/search.png'),
+    key: 'shop',
+    label: 'Shop',
+    route: '/(tabs)/shop',
+    icon: require('../../assets/icons/tag.png'),
   },
   {
     key: 'saved',
@@ -49,7 +49,6 @@ export function BottomNavBar() {
   const router = useRouter();
   const segments = useSegments();
   const insets = useSafeAreaInsets();
-  const { width } = useWindowDimensions();
 
   // Determine active tab based on segments (more reliable than pathname)
   // segments will be like: ['(tabs)', 'index'] or ['(tabs)', 'cart'], etc.
@@ -66,7 +65,7 @@ export function BottomNavBar() {
     // Map screen names to tab keys
     // Type assertion needed because TypeScript doesn't know 'index' is a valid segment
     if (!screen || (screen as string) === 'index') return 'home';
-    if (screen === 'search') return 'search';
+    if (screen === 'shop') return 'shop';
     if (screen === 'saved') return 'saved';
     if (screen === 'cart') return 'cart';
     if (screen === 'profile') return 'account';
@@ -88,7 +87,9 @@ export function BottomNavBar() {
       style={[
         styles.container,
         {
-          paddingBottom: Math.max(insets.bottom, 12),
+          // paddingBottom = safe area inset (home indicator / gesture bar)
+          // + 12pt fixed inner padding so tab labels don't sit flush to the edge
+          paddingBottom: insets.bottom + 12,
         },
       ]}
     >

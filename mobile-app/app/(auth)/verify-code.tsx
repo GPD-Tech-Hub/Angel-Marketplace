@@ -21,13 +21,26 @@ export default function VerifyCodeScreen() {
   const email = params.email ?? '';
 
   const handleVerify = async () => {
-    if (code.length !== 4) {
-      setError('Please enter the complete 4-digit code');
+    if (code.length !== 6) {
+      setError('Please enter the complete 6-digit code');
+      return;
+    }
+    if (!email) {
+      setError('No email address found. Please go back and try again.');
       return;
     }
     setError(null);
-    // The code IS the reset token — pass it straight through to reset-password
-    router.push({ pathname: '/(auth)/reset-password', params: { token: code, email } } as any);
+    setIsLoading(true);
+    try {
+      // Verify the code with the backend — receive a short-lived resetToken
+      const { resetToken } = await authService.verifyResetCode(email, code);
+      // Pass the resetToken (not the 6-digit code) to the reset-password screen
+      router.push({ pathname: '/(auth)/reset-password', params: { token: resetToken } } as any);
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Invalid or expired code. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleResend = async () => {
@@ -40,7 +53,7 @@ export default function VerifyCodeScreen() {
     setIsResending(true);
     try {
       await authService.forgotPassword(email);
-      Alert.alert('Code Sent', `A new code has been sent to ${email}.`);
+      Alert.alert('Code Sent', `A new 6-digit code has been sent to ${email}.`);
     } catch (err: any) {
       setError(err?.response?.data?.message ?? 'Failed to resend code. Please try again.');
     } finally {
@@ -79,7 +92,7 @@ export default function VerifyCodeScreen() {
             {/* Header */}
             <View className="mb-8 items-center">
               <Text className="text-3xl font-bold text-black mb-3 text-center">
-                Enter 4-digit code
+                Enter 6-digit code
               </Text>
               <Text className="text-base text-gray-500 text-center leading-6 px-4">
                 {email
@@ -95,13 +108,13 @@ export default function VerifyCodeScreen() {
               </View>
             ) : null}
 
-            {/* OTP input */}
+            {/* OTP input — 6 digits */}
             <View className="mb-6">
               <OTPInput
-                length={4}
+                length={6}
                 value={code}
                 onChange={setCode}
-                onComplete={() => {/* auto-submit optional */}}
+                onComplete={handleVerify}
                 error={!!error}
               />
             </View>
@@ -135,10 +148,10 @@ export default function VerifyCodeScreen() {
               title={isLoading ? 'Verifying…' : 'Verify Code'}
               onPress={handleVerify}
               loading={isLoading}
-              disabled={code.length !== 4 || isLoading}
+              disabled={code.length !== 6 || isLoading}
               variant="primary"
-              backgroundColor={code.length === 4 ? colors.brand : colors.gray[100]}
-              textColor={code.length === 4 ? '#FFFFFF' : colors.gray[500]}
+              backgroundColor={code.length === 6 ? colors.brand : colors.gray[100]}
+              textColor={code.length === 6 ? '#FFFFFF' : colors.gray[500]}
             />
           </View>
         </View>

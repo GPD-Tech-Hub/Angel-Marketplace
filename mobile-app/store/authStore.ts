@@ -3,6 +3,8 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { User, AuthTokens } from '@/types';
 import { secureStorage, STORAGE_KEYS } from '@/utils/storage';
+import api from '@/services/api';
+import { ENDPOINTS } from '@/constants/endpoints';
 
 interface AuthState {
   user: User | null;
@@ -49,6 +51,43 @@ export const useAuthStore = create<AuthState>()(
       login: async (user, tokens) => {
         await get().setTokens(tokens);
         set({ user, isAuthenticated: true });
+
+        // Merge guest cart items into the API cart
+        try {
+          const { useCartStore } = await import('./cartStore');
+          const cartItems = useCartStore.getState().items;
+          if (cartItems.length > 0) {
+            await Promise.allSettled(
+              cartItems.map((item) =>
+                api.post(ENDPOINTS.CART.ADD_ITEM, {
+                  productId: item.productId,
+                  quantity: item.quantity,
+                  size: item.size,
+                  color: item.color,
+                })
+              )
+            );
+            useCartStore.getState().clearCart();
+          }
+        } catch (e) {
+          console.warn('Cart merge failed:', e);
+        }
+
+        // Merge guest favorites into the API
+        try {
+          const { useFavoritesStore } = await import('./favoritesStore');
+          const localFavs = useFavoritesStore.getState().items;
+          if (localFavs.length > 0) {
+            await Promise.allSettled(
+              localFavs.map((product) =>
+                api.post(ENDPOINTS.FAVORITES.ADD, { productId: product.id })
+              )
+            );
+            useFavoritesStore.getState().clearFavorites();
+          }
+        } catch (e) {
+          console.warn('Favorites merge failed:', e);
+        }
       },
 
       logout: async () => {

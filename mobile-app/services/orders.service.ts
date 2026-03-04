@@ -31,6 +31,10 @@ export const ordersService = {
     );
     return response.data.data;
   },
+
+  async leaveReview(orderId: string, rating: number, comment: string): Promise<void> {
+    await api.post(ENDPOINTS.ORDERS.REVIEW(orderId), { rating, comment });
+  },
 };
 
 export default ordersService;

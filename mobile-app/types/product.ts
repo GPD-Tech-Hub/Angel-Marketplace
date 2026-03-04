@@ -1,3 +1,16 @@
+export interface ProductReview {
+  id: string;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+  user?: { firstName: string; lastName: string };
+}
+
+export interface ProductFeature {
+  featureName: string;
+  featureValue: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -11,6 +24,17 @@ export interface Product {
   category?: Category;
   createdAt: string;
   updatedAt?: string;
+  // Variants
+  hasSizes?: boolean;
+  hasColors?: boolean;
+  sizes?: string[];
+  colors?: string[];
+  // Features / specs
+  features?: ProductFeature[];
+  // Reviews
+  rating?: number;
+  reviewsCount?: number;
+  reviews?: ProductReview[];
 }
 
 export interface Category {

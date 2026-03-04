@@ -18,6 +18,7 @@ export default function ConfirmScreen() {
   const params = useLocalSearchParams<{
     shippingAddress: string;
     paymentMethod: string;
+    couponCode?: string;
   }>();
   const { items, subtotal, clearCart } = useCart();
   const createOrderMutation = useCreateOrder();
@@ -28,6 +29,7 @@ export default function ConfirmScreen() {
     ? JSON.parse(params.shippingAddress)
     : null;
   const paymentMethod = params.paymentMethod as 'stripe' | 'paystack' | 'flutterwave';
+  const couponCode = params.couponCode || undefined;
 
   // Shipping fee matches the settings table value (£5)
   const shipping = 5;
@@ -51,6 +53,7 @@ export default function ConfirmScreen() {
       const order = await createOrderMutation.mutateAsync({
         shippingAddress,
         paymentMethod,
+        ...(couponCode ? { couponCode } : {}),
       });
 
       if (paymentMethod === 'stripe') {

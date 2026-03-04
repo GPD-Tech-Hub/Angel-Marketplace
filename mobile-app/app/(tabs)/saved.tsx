@@ -1,33 +1,30 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Pressable } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useFavoritesStore } from '@/store';
+import { useFavorites } from '@/hooks';
 import { useResponsive } from '@/hooks';
 import { DiscoverSearchBar } from '@/components/layout/DiscoverSearchBar';
-import { EmptySavedItems, SavedItemsGrid } from '@/components/saved';
+import { SavedItemsGrid } from '@/components/saved';
 import { savedScreenStyles as styles } from '@/styles/savedScreen';
+import { colors } from '@/constants/colors';
 
 export default function SavedScreen() {
   const router = useRouter();
   const { horizontalPadding } = useResponsive();
   const [searchQuery, setSearchQuery] = useState('');
-  const favorites = useFavoritesStore((state) => state.items);
-  const isFavorite = useFavoritesStore((state) => state.isFavorite);
-  const toggleFavorite = useFavoritesStore((state) => state.toggleFavorite);
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    // TODO: Filter favorites based on search
-  };
+  const { favorites, isLoading, toggleFavorite, isFavorite } = useFavorites();
 
-  const handleFavoritePress = (product: any) => {
-    toggleFavorite(product);
-  };
+  // Client-side filter when a search query is present
+  const filtered = searchQuery.trim()
+    ? favorites.filter((p) =>
+        p.name.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : favorites;
 
-  const hasFavorites = favorites.length > 0;
+  const hasFavorites = filtered.length > 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -55,20 +52,20 @@ export default function SavedScreen() {
       <View style={styles.searchBarContainer}>
         <DiscoverSearchBar
           value={searchQuery}
-          onChangeText={handleSearch}
-          onSubmit={() => {
-            // TODO: Perform search
-          }}
-          onFilterPress={() => {
-            // TODO: Open filters
-          }}
+          onChangeText={setSearchQuery}
+          onSubmit={() => {}}
+          onFilterPress={() => {}}
         />
       </View>
 
       {/* Content */}
-      {hasFavorites ? (
+      {isLoading ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <ActivityIndicator size="large" color={colors.brand} />
+        </View>
+      ) : hasFavorites ? (
         <SavedItemsGrid
-          products={favorites}
+          products={filtered}
           horizontalPadding={horizontalPadding}
           onItemPress={(product) => {
             router.push({
@@ -76,17 +73,32 @@ export default function SavedScreen() {
               params: { slug: product.slug || product.id },
             } as any);
           }}
-          onFavoritePress={handleFavoritePress}
+          onFavoritePress={toggleFavorite}
           isFavorite={isFavorite}
         />
       ) : (
         <ScrollView
           style={styles.content}
-          contentContainerStyle={styles.scrollContentCentered}
+          contentContainerStyle={[styles.scrollContentCentered, { paddingHorizontal: horizontalPadding }]}
           showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
         >
-          <EmptySavedItems />
+          <Ionicons name="heart-outline" size={56} color={colors.gray[300]} />
+          <Text style={{ fontSize: 18, fontWeight: '700', color: colors.gray[900], marginTop: 16, textAlign: 'center' }}>
+            {searchQuery ? 'No matches found' : 'Nothing saved yet'}
+          </Text>
+          <Text style={{ fontSize: 14, color: colors.gray[500], marginTop: 8, textAlign: 'center', lineHeight: 20 }}>
+            {searchQuery
+              ? 'Try a different search term'
+              : 'Items you heart will appear here'}
+          </Text>
+          {!searchQuery && (
+            <Pressable
+              onPress={() => router.push('/(tabs)/shop' as any)}
+              style={{ marginTop: 24, backgroundColor: colors.brand, paddingHorizontal: 28, paddingVertical: 13, borderRadius: 14 }}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Browse Products</Text>
+            </Pressable>
+          )}
         </ScrollView>
       )}
     </SafeAreaView>

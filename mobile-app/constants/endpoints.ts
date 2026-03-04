@@ -6,6 +6,7 @@ export const ENDPOINTS = {
     LOGOUT: '/auth/logout',
     REFRESH: '/auth/refresh',
     FORGOT_PASSWORD: '/auth/forgot-password',
+    VERIFY_RESET_CODE: '/auth/verify-reset-code',
     RESET_PASSWORD: '/auth/reset-password',
   },
 
@@ -47,6 +48,7 @@ export const ENDPOINTS = {
     CREATE: '/orders',
     DETAIL: (id: string) => `/orders/${id}`,
     CANCEL: (id: string) => `/orders/${id}/cancel`,
+    REVIEW: (id: string) => `/orders/${id}/review`,
   },
 
   // Favorites
@@ -75,5 +77,25 @@ export const ENDPOINTS = {
   // Ads
   ADS: {
     LIST: '/ads',
+  },
+
+  // Settings
+  SETTINGS: {
+    GET: '/settings',
+  },
+
+  // Contact
+  CONTACT: {
+    SUBMIT: '/contact',
+  },
+
+  // Newsletter
+  NEWSLETTER: {
+    SUBSCRIBE: '/newsletter',
+  },
+
+  // Reviews
+  REVIEWS: {
+    LIST: (slug: string) => `/products/${slug}/reviews`,
   },
 } as const;

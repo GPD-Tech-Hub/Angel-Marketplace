@@ -67,15 +67,23 @@ export default function ProfileScreen() {
       icon: require('../../assets/icons/Question.png'),
       label: 'FAQs',
       onPress: () => {
-        // TODO: Navigate to FAQs
+        router.push('/faq' as any);
       },
     },
     {
       icon: require('../../assets/icons/headphones.png'),
       label: 'Help Center',
       onPress: () => {
-        // TODO: Navigate to help center
+        router.push('/contact' as any);
       },
+    },
+    {
+      icon: require('../../assets/icons/circle-user.png'),
+      label: 'About Us',
+      onPress: () => {
+        router.push('/about' as any);
+      },
+      showSeparator: false,
     },
     {
       icon: require('../../assets/icons/log-out.png'),

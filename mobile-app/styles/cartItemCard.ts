@@ -4,82 +4,95 @@ export const cartItemCardStyles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 12,
     marginBottom: 12,
     marginHorizontal: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     elevation: 2,
+    position: 'relative',
   },
+
+  // ── Image ──────────────────────────────────────────
   imageContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
+    width: 90,
+    height: 90,
+    borderRadius: 12,
     overflow: 'hidden',
+    backgroundColor: '#F3F4F6',
     marginRight: 12,
+    flexShrink: 0,
   },
   image: {
     width: '100%',
     height: '100%',
   },
+
+  // ── Details ────────────────────────────────────────
   detailsContainer: {
     flex: 1,
     justifyContent: 'space-between',
+    paddingRight: 24, // space for the × button
   },
   productName: {
     fontWeight: '600',
     color: '#111827',
+    lineHeight: 20,
+    marginBottom: 2,
+  },
+  variantText: {
+    color: '#9CA3AF',
+    fontWeight: '400',
     marginBottom: 4,
   },
-  sizeText: {
-    color: '#6B7280',
-    fontWeight: '400',
+  priceText: {
+    fontWeight: '700',
+    color: '#F43F5E',
     marginBottom: 8,
   },
-  priceQuantityRow: {
+
+  // ── Bottom row: stepper + total ────────────────────
+  bottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  priceText: {
-    fontWeight: '600',
-    color: '#111827',
-    flex: 1,
-  },
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   quantityButton: {
-    width: 36,
-    height: 36,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  quantityDivider: {
-    width: 1,
-    height: 24,
-    backgroundColor: '#E5E7EB',
-  },
   quantityText: {
-    fontWeight: '500',
+    fontWeight: '600',
     color: '#111827',
-    minWidth: 36,
+    minWidth: 28,
     textAlign: 'center',
   },
+  itemTotal: {
+    fontWeight: '700',
+    color: '#111827',
+  },
+
+  // ── Delete (×) ─────────────────────────────────────
   deleteButton: {
     position: 'absolute',
-    top: 12,
-    right: 12,
-    width: 32,
-    height: 32,
+    top: 10,
+    right: 10,
+    width: 24,
+    height: 24,
     alignItems: 'center',
     justifyContent: 'center',
   },

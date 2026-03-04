@@ -37,6 +37,14 @@ export const authService = {
     return response.data.data;
   },
 
+  async verifyResetCode(email: string, code: string): Promise<{ resetToken: string }> {
+    const response = await api.post<ApiResponse<{ resetToken: string }>>(
+      ENDPOINTS.AUTH.VERIFY_RESET_CODE,
+      { email, code }
+    );
+    return response.data.data;
+  },
+
   async resetPassword(token: string, password: string): Promise<{ message: string }> {
     const response = await api.post<ApiResponse<{ message: string }>>(
       ENDPOINTS.AUTH.RESET_PASSWORD,

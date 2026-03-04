@@ -9,7 +9,7 @@ import { OrderStatusTabs } from '@/components/orders/OrderStatusTabs';
 import { EmptyOrders } from '@/components/orders/EmptyOrders';
 import { LeaveReviewModal } from '@/components/orders/LeaveReviewModal';
 import { ordersScreenStyles as styles } from '@/styles/ordersScreen';
-import { useOrders } from '@/queries';
+import { useOrders, useLeaveReview } from '@/queries';
 import { useAuthStore } from '@/store';
 import { config } from '@/constants/config';
 import type { Order, OrderItem } from '@/types';
@@ -44,6 +44,7 @@ export default function OrdersScreen() {
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const { data, isLoading, isError, refetch } = useOrders({ enabled: isAuthenticated });
+  const leaveReviewMutation = useLeaveReview();
 
   const allOrders = useMemo(() => {
     const pages = data?.pages ?? [];
@@ -79,8 +80,15 @@ export default function OrdersScreen() {
     setReviewModalVisible(true);
   };
 
-  const handleReviewSubmit = () => {
-    refetch();
+  const handleReviewSubmit = async (rating: number, comment: string) => {
+    if (!selectedOrderId) return;
+    try {
+      await leaveReviewMutation.mutateAsync({ orderId: selectedOrderId, rating, comment });
+      refetch();
+    } catch (err: any) {
+      // Modal stays open on error so user can retry
+      console.error('Review submission failed:', err);
+    }
   };
 
   const handleCloseModal = () => {
@@ -153,7 +161,10 @@ export default function OrdersScreen() {
       <LeaveReviewModal
         visible={reviewModalVisible}
         onClose={handleCloseModal}
-        onSubmit={handleReviewSubmit}
+        onSubmit={(rating, review) => {
+          handleReviewSubmit(rating, review);
+          handleCloseModal();
+        }}
         orderId={selectedOrderId || undefined}
       />
     </SafeAreaView>
