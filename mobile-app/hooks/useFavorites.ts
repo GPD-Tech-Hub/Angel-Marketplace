@@ -83,6 +83,7 @@ export function useFavorites() {
     removeFavorite,
     isFavorite,
     clearFavorites: localClear,
+    refetchFavorites,
   };
 }
 

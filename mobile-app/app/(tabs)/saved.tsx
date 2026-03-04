@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,7 +16,17 @@ export default function SavedScreen() {
   const { horizontalPadding } = useResponsive();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { favorites, isLoading, toggleFavorite, isFavorite } = useFavorites();
+  const { favorites, isLoading, toggleFavorite, isFavorite, refetchFavorites } = useFavorites();
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refetchFavorites();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchFavorites]);
 
   const filtered = searchQuery.trim()
     ? favorites.filter((p) =>
@@ -74,6 +84,8 @@ export default function SavedScreen() {
           }
           onFavoritePress={toggleFavorite}
           isFavorite={isFavorite}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
         />
       ) : (
         <View style={styles.emptyContainer}>

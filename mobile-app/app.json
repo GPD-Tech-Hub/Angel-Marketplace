@@ -39,6 +39,13 @@
           "merchantIdentifier": "merchant.com.angelmarketplace.app",
           "enableGooglePay": true
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#F43F5E",
+          "sounds": []
+        }
       ]
     ],
     "experiments": {
