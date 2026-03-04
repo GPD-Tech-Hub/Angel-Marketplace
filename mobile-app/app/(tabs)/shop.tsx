@@ -3,6 +3,7 @@ import {
   View,
   Text,
   ScrollView,
+  FlatList,
   Pressable,
   ActivityIndicator,
   StyleSheet,
@@ -195,18 +196,28 @@ export default function ShopScreen() {
           }
         />
       ) : (
-        <View style={s.center}>
-          <Ionicons name="search-outline" size={48} color={colors.gray[300]} />
-          <Text style={s.emptyTitle}>
-            {isSearching ? `No results for "${submittedQuery}"` : 'No products found'}
-          </Text>
-          <Text style={s.emptySubtitle}>Try a different search or category</Text>
-          {isSearching && (
-            <Pressable style={s.clearSearchBtn} onPress={handleClearSearch}>
-              <Text style={s.clearSearchBtnText}>Clear search</Text>
-            </Pressable>
-          )}
-        </View>
+        <FlatList
+          data={[]}
+          renderItem={null}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.brand} colors={[colors.brand]} />
+          }
+          ListEmptyComponent={
+            <View style={s.center}>
+              <Ionicons name="search-outline" size={48} color={colors.gray[300]} />
+              <Text style={s.emptyTitle}>
+                {isSearching ? `No results for "${submittedQuery}"` : 'No products found'}
+              </Text>
+              <Text style={s.emptySubtitle}>Try a different search or category</Text>
+              {isSearching && (
+                <Pressable style={s.clearSearchBtn} onPress={handleClearSearch}>
+                  <Text style={s.clearSearchBtnText}>Clear search</Text>
+                </Pressable>
+              )}
+            </View>
+          }
+          contentContainerStyle={{ flex: 1 }}
+        />
       )}
     </SafeAreaView>
   );
