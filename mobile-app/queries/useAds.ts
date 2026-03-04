@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
-const ADS_URL = 'https://angelmarketplace.org/api/ads';
+const ADS_URL = 'https://angelmarketplace.org/api/ads.php';
 
 export interface Ad {
   id: string;
