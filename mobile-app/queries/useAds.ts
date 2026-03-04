@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import api from '@/services/api';
-import { ENDPOINTS } from '@/constants/endpoints';
-import type { ApiResponse } from '@/types';
+import axios from 'axios';
+
+const ADS_URL = 'https://angelmarketplace.org/api/ads';
 
 export interface Ad {
   id: string;
@@ -19,7 +19,7 @@ export interface Ad {
 }
 
 async function fetchAds(): Promise<Ad[]> {
-  const response = await api.get<ApiResponse<Ad[]>>(ENDPOINTS.ADS.LIST);
+  const response = await axios.get<{ success: boolean; data: Ad[] }>(ADS_URL);
   return response.data.data ?? [];
 }
 
