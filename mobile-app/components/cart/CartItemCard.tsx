@@ -6,10 +6,11 @@ import { CartItem } from '@/types';
 import { useCart } from '@/hooks';
 import { cartItemCardStyles as styles } from '@/styles/cartItemCard';
 import { config } from '@/constants/config';
+import { colors } from '@/constants/colors';
 
 type Props = {
   item: CartItem;
-  /** When provided (e.g. API cart), use these instead of store */
+  /** When provided (API cart), use these instead of local store */
   onIncrement?: (item: CartItem) => void;
   onDecrement?: (item: CartItem) => void;
   onRemove?: (item: CartItem) => void;
@@ -20,39 +21,26 @@ export function CartItemCard({ item, onIncrement, onDecrement, onRemove }: Props
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
   const storeCart = useCart();
   const { product, quantity, price } = item;
+
   const useApi = !!onIncrement;
-  const increment = useApi ? () => onIncrement?.(item) : () => storeCart.increment(item.productId);
-  const decrement = useApi ? () => onDecrement?.(item) : () => storeCart.decrement(item.productId);
-  const removeFromCart = useApi ? () => onRemove?.(item) : () => storeCart.removeFromCart(item.productId);
+  const increment = useApi ? () => onIncrement(item) : () => storeCart.increment(item.productId);
+  const decrement = useApi ? () => onDecrement!(item) : () => storeCart.decrement(item.productId);
+  const removeFromCart = useApi ? () => onRemove!(item) : () => storeCart.removeFromCart(item.productId);
 
-  const getProductImage = () => {
-    if (!product.images || product.images.length === 0) {
-      return { uri: config.IMAGE_PLACEHOLDER };
-    }
-    const imagePath = product.images[0];
-    if (typeof imagePath === 'string' && (imagePath.startsWith('http') || imagePath.startsWith('data:'))) {
-      return { uri: imagePath };
-    }
-    if (imagePath === 'image 2.jpg') return require('../../assets/image/image 2.jpg');
-    if (imagePath === 'image 1.jpg') return require('../../assets/image/image 1.jpg');
-    return { uri: typeof imagePath === 'string' ? imagePath : config.IMAGE_PLACEHOLDER };
-  };
-  const productImage = getProductImage();
+  // Resolve image — images are already full URLs from the backend
+  const imageUri =
+    product.images && product.images.length > 0
+      ? product.images[0]
+      : (product as any).image ?? config.IMAGE_PLACEHOLDER;
+  const productImage = typeof imageUri === 'string' ? { uri: imageUri } : imageUri;
 
-  // Mock size - in real app, this would come from the cart item
-  const size = 'L';
+  // Use real size/color from cart item if available
+  const size = (item as any).size as string | undefined;
+  const color = (item as any).color as string | undefined;
+  const sizeLabel = size ? `Size ${size}` : color ? `Colour: ${color}` : null;
 
-  const handleIncrement = () => {
-    increment(item.productId);
-  };
-
-  const handleDecrement = () => {
-    decrement(item.productId);
-  };
-
-  const handleDelete = () => {
-    removeFromCart(item.productId);
-  };
+  const formatPrice = (p: number) =>
+    `£${p.toLocaleString('en-GB', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <View style={styles.card}>
@@ -62,40 +50,39 @@ export function CartItemCard({ item, onIncrement, onDecrement, onRemove }: Props
           source={productImage}
           style={styles.image}
           contentFit="cover"
+          cachePolicy="memory-disk"
         />
       </View>
 
       {/* Product Details */}
       <View style={styles.detailsContainer}>
-        {/* Product Name */}
-        <Text style={[styles.productName, { fontSize: Math.round(16 * scale) }]} numberOfLines={1}>
+        <Text style={[styles.productName, { fontSize: Math.round(16 * scale) }]} numberOfLines={2}>
           {product.name}
         </Text>
 
-        {/* Size */}
-        <Text style={[styles.sizeText, { fontSize: Math.round(14 * scale) }]}>
-          Size {size}
-        </Text>
+        {sizeLabel ? (
+          <Text style={[styles.sizeText, { fontSize: Math.round(13 * scale) }]}>
+            {sizeLabel}
+          </Text>
+        ) : null}
 
         {/* Price and Quantity Controls Row */}
         <View style={styles.priceQuantityRow}>
-          {/* Price */}
           <Text style={[styles.priceText, { fontSize: Math.round(16 * scale) }]}>
-            $ {price.toLocaleString('en-US')}
+            {formatPrice(price)}
           </Text>
 
-          {/* Quantity Controls */}
           <View style={styles.quantityContainer}>
             <Pressable
               style={styles.quantityButton}
-              onPress={handleDecrement}
+              onPress={decrement}
               hitSlop={10}
             >
               {({ pressed }) => (
                 <Ionicons
                   name="remove"
                   size={Math.round(16 * scale)}
-                  color="#111827"
+                  color={colors.gray[900]}
                   style={{ opacity: pressed ? 0.7 : 1 }}
                 />
               )}
@@ -107,14 +94,14 @@ export function CartItemCard({ item, onIncrement, onDecrement, onRemove }: Props
             <View style={styles.quantityDivider} />
             <Pressable
               style={styles.quantityButton}
-              onPress={handleIncrement}
+              onPress={increment}
               hitSlop={10}
             >
               {({ pressed }) => (
                 <Ionicons
                   name="add"
                   size={Math.round(16 * scale)}
-                  color="#111827"
+                  color={colors.gray[900]}
                   style={{ opacity: pressed ? 0.7 : 1 }}
                 />
               )}
@@ -126,14 +113,14 @@ export function CartItemCard({ item, onIncrement, onDecrement, onRemove }: Props
       {/* Delete Button */}
       <Pressable
         style={styles.deleteButton}
-        onPress={handleDelete}
+        onPress={removeFromCart}
         hitSlop={10}
       >
         {({ pressed }) => (
           <Ionicons
             name="trash-outline"
             size={Math.round(20 * scale)}
-            color="#EF4444"
+            color={colors.error}
             style={{ opacity: pressed ? 0.7 : 1 }}
           />
         )}

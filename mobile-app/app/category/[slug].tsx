@@ -1,3 +1,4 @@
+import { colors } from '@/constants/colors';
 import React from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, Stack } from 'expo-router';
@@ -32,7 +33,7 @@ export default function CategoryScreen() {
       <View className="flex-1 bg-gray-50">
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#F43F5E" />
+            <ActivityIndicator size="large" color={colors.brand} />
           </View>
         ) : (
           <ProductGrid

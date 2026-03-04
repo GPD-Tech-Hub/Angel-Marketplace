@@ -1,4 +1,6 @@
 export const colors = {
+  /** Brand rose/pink — used throughout the app as the primary action colour */
+  brand: '#F43F5E',
   primary: {
     50: '#f0f9ff',
     100: '#e0f2fe',

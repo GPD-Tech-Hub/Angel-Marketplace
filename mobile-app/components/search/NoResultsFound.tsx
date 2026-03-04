@@ -1,3 +1,4 @@
+import { colors } from '@/constants/colors';
 import React from 'react';
 import { View, Text, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
@@ -41,7 +42,7 @@ export function NoResultsFound({ searchQuery }: Props) {
         source={require('../../assets/icons/Search-duotone.png')}
         style={[styles.icon, responsiveStyles.icon]}
         contentFit="contain"
-        tintColor="#F43F5E"
+        tintColor={colors.brand}
       />
       <View style={[styles.textContainer, responsiveStyles.textContainer]}>
         <Text style={[styles.title, responsiveStyles.title]}>

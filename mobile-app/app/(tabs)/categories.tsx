@@ -1,3 +1,4 @@
+import { colors } from '@/constants/colors';
 import React from 'react';
 import {
   View,
@@ -73,7 +74,7 @@ export default function CategoriesScreen() {
           </Text>
         </View>
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color="#F43F5E" />
+          <ActivityIndicator size="large" color={colors.brand} />
         </View>
       </SafeAreaView>
     );
@@ -88,7 +89,7 @@ export default function CategoriesScreen() {
           </Text>
         </View>
         <View style={styles.errorWrap}>
-          <Ionicons name="alert-circle-outline" size={48} color="#F43F5E" style={styles.errorIcon} />
+          <Ionicons name="alert-circle-outline" size={48} color={colors.brand} style={styles.errorIcon} />
           <Text style={styles.errorText}>
             Failed to load categories. Check your connection and try again.
           </Text>
@@ -127,8 +128,8 @@ export default function CategoriesScreen() {
           <RefreshControl
             refreshing={isRefetching && categories.length > 0}
             onRefresh={refetch}
-            colors={['#F43F5E']}
-            tintColor="#F43F5E"
+            colors={[colors.brand]}
+            tintColor={colors.brand}
           />
         }
         ListEmptyComponent={

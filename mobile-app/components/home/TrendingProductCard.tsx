@@ -11,6 +11,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { trendingProductCardStyles as styles } from '@/styles/trendingProductCard';
 import { useFavoritesStore } from '@/store';
+import { formatCurrency } from '@/utils';
 
 export type TrendingProduct = {
   id: string;
@@ -89,7 +90,7 @@ export function TrendingProductCard({ item, style, onPress, onFavoritePress }: P
           </Text>
 
           <View style={styles.metaRow}>
-            <Text style={styles.price}>£{item.price}</Text>
+            <Text style={styles.price}>{formatCurrency(item.price)}</Text>
             <View style={styles.ratingWrap}>
               <Ionicons name="star" size={starSize} color="#FBBF24" />
               <Text style={styles.ratingText}>{item.rating.toFixed(1)}</Text>

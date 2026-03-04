@@ -71,4 +71,9 @@ export const ENDPOINTS = {
     MARK_READ: (id: string) => `/notifications/${id}/read`,
     SETTINGS: '/notifications/settings',
   },
+
+  // Ads
+  ADS: {
+    LIST: '/ads',
+  },
 } as const;

@@ -4,28 +4,21 @@ import { orderSummaryStyles as styles } from '@/styles/orderSummary';
 
 type Props = {
   subtotal: number;
-  vat?: number;
   shippingFee?: number;
   total?: number;
 };
 
-export function OrderSummary({
-  subtotal,
-  vat = 0,
-  shippingFee = 80,
-  total,
-}: Props) {
+export function OrderSummary({ subtotal, shippingFee = 5, total }: Props) {
   const { width } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
-  
-  const calculatedTotal = total ?? subtotal + vat + shippingFee;
 
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('en-US', {
+  const calculatedTotal = total ?? subtotal + shippingFee;
+
+  const formatPrice = (price: number) =>
+    `£${price.toLocaleString('en-GB', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    });
-  };
+    })}`;
 
   return (
     <View style={styles.container}>
@@ -35,17 +28,7 @@ export function OrderSummary({
           Sub-total
         </Text>
         <Text style={[styles.value, { fontSize: Math.round(14 * scale) }]}>
-          $ {formatPrice(subtotal)}
-        </Text>
-      </View>
-
-      {/* VAT */}
-      <View style={styles.row}>
-        <Text style={[styles.label, { fontSize: Math.round(14 * scale) }]}>
-          VAT (%)
-        </Text>
-        <Text style={[styles.value, { fontSize: Math.round(14 * scale) }]}>
-          $ {formatPrice(vat)}
+          {formatPrice(subtotal)}
         </Text>
       </View>
 
@@ -55,7 +38,7 @@ export function OrderSummary({
           Shipping fee
         </Text>
         <Text style={[styles.value, { fontSize: Math.round(14 * scale) }]}>
-          $ {formatPrice(shippingFee)}
+          {shippingFee === 0 ? 'Free' : formatPrice(shippingFee)}
         </Text>
       </View>
 
@@ -68,7 +51,7 @@ export function OrderSummary({
           Total
         </Text>
         <Text style={[styles.totalValue, { fontSize: Math.round(20 * scale) }]}>
-          $ {formatPrice(calculatedTotal)}
+          {formatPrice(calculatedTotal)}
         </Text>
       </View>
     </View>

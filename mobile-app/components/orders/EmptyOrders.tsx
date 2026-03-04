@@ -1,3 +1,4 @@
+import { colors } from '@/constants/colors';
 import React from 'react';
 import { View, Text, useWindowDimensions } from 'react-native';
 import { Image } from 'expo-image';
@@ -26,7 +27,7 @@ export function EmptyOrders({ status }: EmptyOrdersProps) {
           { width: Math.round(120 * scale), height: Math.round(120 * scale) },
         ]}
         contentFit="contain"
-        tintColor="#F43F5E"
+        tintColor={colors.brand}
       />
       <Text style={[styles.title, { fontSize: Math.round(20 * scale) }]}>
         {title}

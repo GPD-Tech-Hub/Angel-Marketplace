@@ -29,7 +29,8 @@ export default function ConfirmScreen() {
     : null;
   const paymentMethod = params.paymentMethod as 'stripe' | 'paystack' | 'flutterwave';
 
-  const shipping = subtotal >= 50 ? 0 : 5.99;
+  // Shipping fee matches the settings table value (£5)
+  const shipping = 5;
   const total = subtotal + shipping;
 
   const paymentMethodNames = {
@@ -148,7 +149,7 @@ export default function ConfirmScreen() {
         {/* Shipping Address */}
         <Card className="mb-4">
           <View className="flex-row items-center mb-3">
-            <Ionicons name="location-outline" size={20} color="#0ea5e9" />
+            <Ionicons name="location-outline" size={20} color="#F43F5E" />
             <Text className="text-lg font-semibold text-gray-900 ml-2">
               Shipping Address
             </Text>
@@ -170,7 +171,7 @@ export default function ConfirmScreen() {
         {/* Payment Method */}
         <Card className="mb-4">
           <View className="flex-row items-center">
-            <Ionicons name="card-outline" size={20} color="#0ea5e9" />
+            <Ionicons name="card-outline" size={20} color="#F43F5E" />
             <Text className="text-lg font-semibold text-gray-900 ml-2">
               Payment Method
             </Text>

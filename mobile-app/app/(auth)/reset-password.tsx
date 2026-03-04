@@ -9,6 +9,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { resetPasswordSchema } from '@/utils/validation';
 import { authService } from '@/services';
+import { colors } from '@/constants/colors';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
@@ -68,7 +69,7 @@ export default function ResetPasswordScreen() {
                 <Ionicons
                   name="arrow-back"
                   size={24}
-                  color="#374151"
+                  color={colors.gray[700]}
                   style={{ opacity: pressed ? 0.7 : 1 }}
                 />
               )}
@@ -135,8 +136,8 @@ export default function ResetPasswordScreen() {
               loading={isLoading}
               disabled={!isValid || isLoading}
               variant="primary"
-              backgroundColor={isValid ? '#F43F5E' : '#F3F4F6'}
-              textColor={isValid ? '#FFFFFF' : '#000000'}
+              backgroundColor={isValid ? colors.brand : colors.gray[100]}
+              textColor={isValid ? '#FFFFFF' : colors.gray[500]}
             />
           </View>
         </View>

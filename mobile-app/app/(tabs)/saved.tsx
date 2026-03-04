@@ -72,8 +72,8 @@ export default function SavedScreen() {
           horizontalPadding={horizontalPadding}
           onItemPress={(product) => {
             router.push({
-              pathname: '/product-details',
-              params: { productId: product.id },
+              pathname: '/product/[slug]',
+              params: { slug: product.slug || product.id },
             } as any);
           }}
           onFavoritePress={handleFavoritePress}

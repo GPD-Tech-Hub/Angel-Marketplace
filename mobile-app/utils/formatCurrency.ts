@@ -6,7 +6,7 @@ import { config } from '@/constants/config';
 export function formatCurrency(
   amount: number,
   currency: string = config.CURRENCY,
-  locale: string = 'en-US'
+  locale: string = 'en-GB'
 ): string {
   return new Intl.NumberFormat(locale, {
     style: 'currency',

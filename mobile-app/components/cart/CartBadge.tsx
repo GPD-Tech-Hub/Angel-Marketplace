@@ -1,13 +1,22 @@
 import React from 'react';
 import { View, Text } from 'react-native';
 import { useCart } from '@/hooks';
+import { useAuthStore } from '@/store';
+import { useCartQuery } from '@/queries';
 
 interface CartBadgeProps {
   size?: 'sm' | 'md';
 }
 
 export function CartBadge({ size = 'sm' }: CartBadgeProps) {
-  const { itemCount } = useCart();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const { data: apiCart } = useCartQuery({ enabled: isAuthenticated });
+  const { itemCount: storeItemCount } = useCart();
+
+  // Prefer API cart count when logged in; fall back to local store
+  const itemCount = isAuthenticated && apiCart
+    ? apiCart.itemCount ?? apiCart.items?.length ?? 0
+    : storeItemCount;
 
   if (itemCount === 0) return null;
 
@@ -27,7 +36,7 @@ export function CartBadge({ size = 'sm' }: CartBadgeProps) {
     <View
       className={`
         absolute -top-1 -right-1 items-center justify-center 
-        rounded-full bg-red-500
+        rounded-full bg-brand
         ${sizeStyles[size]}
       `}
     >

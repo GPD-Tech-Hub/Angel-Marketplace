@@ -6,6 +6,8 @@ export interface CartItem {
   product: Product;
   quantity: number;
   price: number;
+  size?: string | null;
+  color?: string | null;
 }
 
 export interface Cart {

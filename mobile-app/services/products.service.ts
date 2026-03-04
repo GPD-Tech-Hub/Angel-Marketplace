@@ -3,6 +3,7 @@ import { ENDPOINTS } from '@/constants/endpoints';
 import {
   Product,
   Category,
+  Ad,
   PaginatedProducts,
   ProductFilters,
   ApiResponse,
@@ -74,6 +75,17 @@ export const productsService = {
       `${ENDPOINTS.PRODUCTS.TRENDING}?limit=${limit}`
     );
     return response.data.data.products ?? [];
+  },
+
+  async getAds(limit: number = 5, categorySlug?: string): Promise<Ad[]> {
+    const params = new URLSearchParams();
+    params.append('limit', String(limit));
+    if (categorySlug) params.append('categorySlug', categorySlug);
+
+    const response = await api.get<ApiResponse<Ad[]>>(
+      `${ENDPOINTS.ADS.LIST}?${params.toString()}`
+    );
+    return response.data.data ?? [];
   },
 };
 

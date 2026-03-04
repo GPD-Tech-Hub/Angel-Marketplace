@@ -10,6 +10,7 @@ import {
   Keyboard,
   Platform,
   KeyboardAvoidingView,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -20,6 +21,8 @@ import { newAddressScreenStyles as styles } from '@/styles/newAddressScreen';
 import { geocode, geocodeSearch } from '@/services/geocoding.service';
 import type { GeoResult } from '@/services/geocoding.service';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useCreateAddress } from '@/queries';
+import { useAuthStore } from '@/store';
 
 const ADDRESS_NICKNAMES = ['Home', 'Office', 'Apartment', "Parent's House", 'Other'];
 
@@ -36,9 +39,13 @@ export default function NewAddressScreen() {
   const { width, height } = useWindowDimensions();
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
 
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const createAddressMutation = useCreateAddress();
+
   const [addressNickname, setAddressNickname] = useState('');
   const [fullAddress, setFullAddress] = useState('');
   const [isDefault, setIsDefault] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [showNicknamePicker, setShowNicknamePicker] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -127,10 +134,42 @@ export default function NewAddressScreen() {
 
   const isFormValid = addressNickname.trim().length > 0 && fullAddress.trim().length > 0;
 
-  const handleAdd = () => {
-    if (!isFormValid) return;
-    console.log('Add address:', { addressNickname, fullAddress, isDefault, markerPosition });
-    setShowSuccessModal(true);
+  const handleAdd = async () => {
+    if (!isFormValid || isSaving) return;
+
+    if (!isAuthenticated) {
+      Alert.alert('Sign In Required', 'Please sign in to save an address.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Parse the free-text address into structured fields as best we can.
+      // Expected patterns: "Street, City, Postcode, Country" or similar.
+      const parts = fullAddress.split(',').map((p) => p.trim()).filter(Boolean);
+      const street = parts[0] ?? fullAddress;
+      const city = parts[1] ?? addressNickname;
+      const state = parts[2] ?? parts[1] ?? '';
+      const zipCode = parts[3] ?? parts[2] ?? '';
+      const country = parts[4] ?? parts[3] ?? 'United Kingdom';
+
+      await createAddressMutation.mutateAsync({
+        firstName: addressNickname, // nickname becomes the label (first field)
+        lastName: '',
+        address: street,
+        city,
+        state,
+        zipCode,
+        country,
+        phone: '',
+        isDefault,
+      });
+      setShowSuccessModal(true);
+    } catch (err: any) {
+      Alert.alert('Error', err?.response?.data?.message ?? 'Failed to save address. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleContinue = () => {
@@ -280,7 +319,7 @@ export default function NewAddressScreen() {
               </Text>
             </Pressable>
 
-            <Pressable style={styles.addButton} onPress={handleAdd} disabled={!isFormValid}>
+            <Pressable style={styles.addButton} onPress={handleAdd} disabled={!isFormValid || isSaving}>
               {({ pressed }) => (
                 <View
                   style={[
@@ -289,14 +328,18 @@ export default function NewAddressScreen() {
                     { opacity: pressed && isFormValid ? 0.9 : 1 },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.addButtonText,
-                      { fontSize: Math.round(16 * scale), color: isFormValid ? '#FFFFFF' : '#6B7280' },
-                    ]}
-                  >
-                    Add
-                  </Text>
+                  {isSaving ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.addButtonText,
+                        { fontSize: Math.round(16 * scale), color: isFormValid ? '#FFFFFF' : '#6B7280' },
+                      ]}
+                    >
+                      Add Address
+                    </Text>
+                  )}
                 </View>
               )}
             </Pressable>

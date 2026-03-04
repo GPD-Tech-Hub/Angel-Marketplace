@@ -1,38 +1,51 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useResponsive } from '@/hooks';
 import { FormButton, OTPInput } from '@/components/ui';
+import { authService } from '@/services';
+import { colors } from '@/constants/colors';
 
 export default function VerifyCodeScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ email?: string }>();
   const [code, setCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { horizontalPadding } = useResponsive();
   const insets = useSafeAreaInsets();
 
-  // Get email from params or use a default/placeholder
-  const email = params.email || 'cody.fisher45@example.com';
+  const email = params.email ?? '';
 
   const handleVerify = async () => {
     if (code.length !== 4) {
       setError('Please enter the complete 4-digit code');
       return;
     }
-
-    // No verification yet — just proceed to Reset Password screen.
-    router.push('/(auth)/reset-password');
+    setError(null);
+    // The code IS the reset token — pass it straight through to reset-password
+    router.push({ pathname: '/(auth)/reset-password', params: { token: code, email } } as any);
   };
 
   const handleResend = async () => {
+    if (!email) {
+      Alert.alert('Error', 'No email address found. Please go back and try again.');
+      return;
+    }
     setError(null);
     setCode('');
-    // TODO: Implement resend code logic
-    // await resendCode(email);
+    setIsResending(true);
+    try {
+      await authService.forgotPassword(email);
+      Alert.alert('Code Sent', `A new code has been sent to ${email}.`);
+    } catch (err: any) {
+      setError(err?.response?.data?.message ?? 'Failed to resend code. Please try again.');
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -46,9 +59,9 @@ export default function VerifyCodeScreen() {
             className="flex-1"
             contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 16 }}
             keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={true}
+            showsVerticalScrollIndicator={false}
           >
-            {/* Back Button */}
+            {/* Back */}
             <Pressable
               className="w-10 h-10 items-center justify-center mt-4 mb-2"
               onPress={() => router.back()}
@@ -57,7 +70,7 @@ export default function VerifyCodeScreen() {
                 <Ionicons
                   name="arrow-back"
                   size={24}
-                  color="#374151"
+                  color={colors.gray[700]}
                   style={{ opacity: pressed ? 0.7 : 1 }}
                 />
               )}
@@ -66,48 +79,50 @@ export default function VerifyCodeScreen() {
             {/* Header */}
             <View className="mb-8 items-center">
               <Text className="text-3xl font-bold text-black mb-3 text-center">
-                Enter 4 digit code
+                Enter 4-digit code
               </Text>
               <Text className="text-base text-gray-500 text-center leading-6 px-4">
-                Enter 4 digit code that your receive on your email ({email}).
+                {email
+                  ? `We sent a reset code to ${email}.`
+                  : 'Enter the code from your email.'}
               </Text>
             </View>
 
-            {/* Error Message */}
-            {error && (
+            {/* Error */}
+            {error ? (
               <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-6">
                 <Text className="text-red-600 text-sm text-center">{error}</Text>
               </View>
-            )}
+            ) : null}
 
-            {/* OTP Input */}
+            {/* OTP input */}
             <View className="mb-6">
               <OTPInput
                 length={4}
                 value={code}
                 onChange={setCode}
-                onComplete={(value) => {
-                  // Auto-submit when all digits are entered (optional)
-                  // handleVerify();
-                }}
+                onComplete={() => {/* auto-submit optional */}}
                 error={!!error}
               />
             </View>
 
-            {/* Resend Code Link */}
+            {/* Resend */}
             <View className="flex-row justify-center items-center mb-4">
-              <Text className="text-[#737373] text-base">Code not received? </Text>
-              <Pressable onPress={handleResend}>
+              <Text className="text-gray-500 text-base">Code not received? </Text>
+              <Pressable onPress={handleResend} disabled={isResending} hitSlop={8}>
                 {({ pressed }) => (
-                  <Text className={`text-[#F43F5E] text-base ${pressed ? 'opacity-70' : ''}`}>
-                    Resend code
+                  <Text
+                    style={{ color: colors.brand, opacity: pressed || isResending ? 0.6 : 1 }}
+                    className="text-base font-medium"
+                  >
+                    {isResending ? 'Sending…' : 'Resend code'}
                   </Text>
                 )}
               </Pressable>
             </View>
           </ScrollView>
 
-          {/* Bottom sticky button */}
+          {/* Sticky button */}
           <View
             className="bg-white"
             style={{
@@ -117,13 +132,13 @@ export default function VerifyCodeScreen() {
             }}
           >
             <FormButton
-              title={isLoading ? 'Verifying...' : 'Send Code'}
+              title={isLoading ? 'Verifying…' : 'Verify Code'}
               onPress={handleVerify}
               loading={isLoading}
               disabled={code.length !== 4 || isLoading}
               variant="primary"
-              backgroundColor={code.length === 4 ? '#F43F5E' : '#F3F4F6'}
-              textColor={code.length === 4 ? '#FFFFFF' : '#000000'}
+              backgroundColor={code.length === 4 ? colors.brand : colors.gray[100]}
+              textColor={code.length === 4 ? '#FFFFFF' : colors.gray[500]}
             />
           </View>
         </View>

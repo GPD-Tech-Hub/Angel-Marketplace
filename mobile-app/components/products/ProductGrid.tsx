@@ -3,6 +3,7 @@ import { View, FlatList, RefreshControl, Text, ActivityIndicator } from 'react-n
 import { Product } from '@/types';
 import { ProductCard } from './ProductCard';
 import { SkeletonProductCard } from '@/components/ui';
+import { colors } from '@/constants/colors';
 
 interface ProductGridProps {
   products: Product[];
@@ -39,7 +40,7 @@ export function ProductGrid({
     if (!isFetchingNextPage) return null;
     return (
       <View className="py-4 items-center">
-        <ActivityIndicator size="small" color="#0ea5e9" />
+        <ActivityIndicator size="small" color={colors.brand} />
       </View>
     );
   };
@@ -84,7 +85,8 @@ export function ProductGrid({
           <RefreshControl
             refreshing={isRefreshing}
             onRefresh={onRefresh}
-            tintColor="#0ea5e9"
+            tintColor={colors.brand}
+            colors={[colors.brand]}
           />
         ) : undefined
       }

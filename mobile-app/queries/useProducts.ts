@@ -11,6 +11,8 @@ export const productKeys = {
   details: () => [...productKeys.all, 'detail'] as const,
   detail: (slug: string) => [...productKeys.details(), slug] as const,
   search: (query: string) => [...productKeys.all, 'search', query] as const,
+  ads: (limit: number, categorySlug?: string) =>
+    [...productKeys.all, 'ads', limit, categorySlug ?? 'all'] as const,
 };
 
 // Get paginated products (infinite scroll)
@@ -57,6 +59,15 @@ export function useTrendingProducts(limit: number = 10) {
   return useQuery({
     queryKey: [...productKeys.all, 'trending', limit] as const,
     queryFn: () => productsService.getTrending(limit),
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+// Home ads/banners
+export function useAds(limit: number = 5, categorySlug?: string) {
+  return useQuery({
+    queryKey: productKeys.ads(limit, categorySlug),
+    queryFn: () => productsService.getAds(limit, categorySlug),
     staleTime: 1000 * 60 * 5,
   });
 }

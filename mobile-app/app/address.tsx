@@ -1,3 +1,4 @@
+import { colors } from '@/constants/colors';
 import React, { useState, useMemo } from 'react';
 import {
   View,
@@ -72,7 +73,7 @@ export default function AddressScreen() {
           <View style={styles.headerSpacer} />
         </View>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#F43F5E" />
+          <ActivityIndicator size="large" color={colors.brand} />
         </View>
       </SafeAreaView>
     );
@@ -134,7 +135,7 @@ export default function AddressScreen() {
           <RefreshControl
             refreshing={isRefetching}
             onRefresh={() => refetch()}
-            tintColor="#F43F5E"
+            tintColor={colors.brand}
           />
         }
       >

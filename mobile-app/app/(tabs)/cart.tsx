@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, Pressable, useWindowDimensions, ActivityIndicator } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { View, Text, ScrollView, Pressable, useWindowDimensions, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -10,7 +10,7 @@ import { CartItem } from '@/types';
 import { cartScreenStyles as styles } from '@/styles/cartScreen';
 import { useAuthStore } from '@/store';
 import { useCartQuery, useUpdateCartItem, useRemoveCartItem } from '@/queries';
-
+import { colors } from '@/constants/colors';
 
 export default function CartScreen() {
   const router = useRouter();
@@ -19,10 +19,22 @@ export default function CartScreen() {
   const scale = Math.max(0.9, Math.min(1.0, width / 390));
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const { data: apiCart, isLoading: cartLoading } = useCartQuery({ enabled: isAuthenticated });
+  const { data: apiCart, isLoading: cartLoading, refetch } = useCartQuery({ enabled: isAuthenticated });
   const updateCartItem = useUpdateCartItem();
   const removeCartItem = useRemoveCartItem();
   const { items: storeItems, subtotal: storeSubtotal } = useCart();
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [isAuthenticated, refetch]);
 
   const useApiCart = isAuthenticated && apiCart;
   const items: CartItem[] = useApiCart ? (apiCart.items ?? []) : storeItems;
@@ -40,13 +52,13 @@ export default function CartScreen() {
   const handleApiRemove = (item: CartItem) => removeCartItem.mutate(item.id);
 
   const handleCheckout = () => router.push('/checkout');
-  const vat = 0;
-  const shippingFee = 80;
-  const total = subtotal + vat + shippingFee;
+  // Shipping fee matches the value stored in the settings table (£5)
+  const SHIPPING_FEE = 5;
+  const total = subtotal + SHIPPING_FEE;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Custom Header */}
+      {/* Header */}
       <View style={styles.header}>
         <Pressable
           style={styles.backButton}
@@ -57,7 +69,7 @@ export default function CartScreen() {
             <Ionicons
               name="chevron-back"
               size={24}
-              color="#111827"
+              color={colors.gray[900]}
               style={{ opacity: pressed ? 0.7 : 1 }}
             />
           )}
@@ -73,10 +85,20 @@ export default function CartScreen() {
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          isAuthenticated ? (
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.brand}
+              colors={[colors.brand]}
+            />
+          ) : undefined
+        }
       >
-        {cartLoading && isAuthenticated ? (
+        {cartLoading && isAuthenticated && !refreshing ? (
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-            <ActivityIndicator size="large" color="#F43F5E" />
+            <ActivityIndicator size="large" color={colors.brand} />
           </View>
         ) : items.length > 0 ? (
           <>
@@ -95,8 +117,7 @@ export default function CartScreen() {
             {/* Order Summary */}
             <OrderSummary
               subtotal={subtotal}
-              vat={vat}
-              shippingFee={shippingFee}
+              shippingFee={SHIPPING_FEE}
               total={total}
             />
 
@@ -117,7 +138,7 @@ export default function CartScreen() {
               Your cart is empty
             </Text>
             <Text style={[styles.emptyMessage, { fontSize: Math.round(14 * scale) }]}>
-              When you add products, they’ll \n appear here.
+              {"When you add products,\nthey'll appear here."}
             </Text>
           </View>
         )}

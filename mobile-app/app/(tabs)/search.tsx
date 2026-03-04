@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Pressable } from 'react-native';
@@ -7,64 +7,70 @@ import { Ionicons } from '@expo/vector-icons';
 import { DiscoverSearchBar } from '@/components/layout/DiscoverSearchBar';
 import { RecentSearches, NoResultsFound } from '@/components/search';
 import { searchScreenStyles as styles } from '@/styles/searchScreen';
+import { useProductSearch } from '@/queries/useProducts';
+import { colors } from '@/constants/colors';
+import { Product } from '@/types';
+import { ProductGrid } from '@/components/products';
 
 export default function SearchScreen() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
+  const [submittedQuery, setSubmittedQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>([
-    'Shirts',
-    'Gift',
-    'Jacket',
-    'Gown',
+    'Shirts', 'Gift', 'Jacket', 'Gown',
   ]);
+
+  // Only search once the user has actually submitted (or typed ≥2 chars after debounce)
+  const { data: searchResults = [], isFetching } = useProductSearch(
+    submittedQuery,
+    submittedQuery.trim().length >= 2
+  );
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
-    // TODO: Perform actual search
-  };
-
-  const handleSearchSubmit = () => {
-    if (searchQuery.trim()) {
-      // Add to recent searches if not already there
-      if (!recentSearches.includes(searchQuery.trim())) {
-        setRecentSearches([searchQuery.trim(), ...recentSearches].slice(0, 10));
-      }
-      // TODO: Perform search and show results
+    // Live search as they type (debounced inside useProductSearch at ≥2 chars)
+    if (query.trim().length >= 2) {
+      setSubmittedQuery(query.trim());
+    } else if (query.trim().length === 0) {
+      setSubmittedQuery('');
     }
   };
 
-  const handleClearAll = () => {
-    setRecentSearches([]);
+  const handleSearchSubmit = useCallback(() => {
+    const q = searchQuery.trim();
+    if (!q) return;
+    setSubmittedQuery(q);
+    if (!recentSearches.includes(q)) {
+      setRecentSearches((prev) => [q, ...prev].slice(0, 10));
+    }
+  }, [searchQuery, recentSearches]);
+
+  const handleClearAll = () => setRecentSearches([]);
+  const handleRemoveSearch = (s: string) =>
+    setRecentSearches((prev) => prev.filter((r) => r !== s));
+  const handleSearchPress = (s: string) => {
+    setSearchQuery(s);
+    setSubmittedQuery(s);
   };
 
-  const handleRemoveSearch = (search: string) => {
-    setRecentSearches(recentSearches.filter((s) => s !== search));
+  const handleProductPress = (product: Product) => {
+    router.push({ pathname: '/product/[slug]', params: { slug: product.slug } } as any);
   };
 
-  const handleSearchPress = (search: string) => {
-    setSearchQuery(search);
-    handleSearchSubmit();
-  };
-
-  // Show no results if there's a search query but no results
-  const showNoResults = searchQuery.trim().length > 0;
-  // Show recent searches if no search query or empty results
-  const showRecentSearches = !showNoResults && recentSearches.length > 0;
+  const hasQuery = submittedQuery.trim().length >= 2;
+  const hasResults = searchResults.length > 0;
+  const showRecent = !hasQuery && recentSearches.length > 0;
 
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-          hitSlop={10}
-        >
+        <Pressable style={styles.backButton} onPress={() => router.back()} hitSlop={10}>
           {({ pressed }) => (
             <Ionicons
               name="chevron-back"
               size={24}
-              color="#111827"
+              color={colors.gray[900]}
               style={{ opacity: pressed ? 0.7 : 1 }}
             />
           )}
@@ -79,34 +85,51 @@ export default function SearchScreen() {
           value={searchQuery}
           onChangeText={handleSearch}
           onSubmit={handleSearchSubmit}
-          onFilterPress={() => {
-            // TODO: Open filters
-          }}
+          onFilterPress={() => {/* TODO: filters */}}
         />
       </View>
 
-      {/* Content */}
-      <ScrollView
-        style={styles.content}
-        contentContainerStyle={
-          showNoResults
-            ? styles.scrollContentCentered
-            : styles.scrollContentNormal
-        }
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        {showNoResults ? (
-          <NoResultsFound searchQuery={searchQuery} />
-        ) : showRecentSearches ? (
+      {/* Loading spinner */}
+      {hasQuery && isFetching && (
+        <View style={{ paddingVertical: 32, alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.brand} />
+        </View>
+      )}
+
+      {/* Results / recent / no-results */}
+      {!isFetching && hasQuery && hasResults ? (
+        <ProductGrid
+          products={searchResults}
+          onEndReached={undefined}
+          ListHeaderComponent={
+            <Text style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4, color: colors.gray[500], fontSize: 13 }}>
+              {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{submittedQuery}"
+            </Text>
+          }
+        />
+      ) : !isFetching && hasQuery && !hasResults ? (
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContentCentered}
+          showsVerticalScrollIndicator={false}
+        >
+          <NoResultsFound searchQuery={submittedQuery} />
+        </ScrollView>
+      ) : showRecent ? (
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.scrollContentNormal}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
           <RecentSearches
             searches={recentSearches}
             onSearchPress={handleSearchPress}
             onClearAll={handleClearAll}
             onRemoveSearch={handleRemoveSearch}
           />
-        ) : null}
-      </ScrollView>
+        </ScrollView>
+      ) : null}
     </SafeAreaView>
   );
 }

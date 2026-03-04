@@ -1,3 +1,4 @@
+import { colors } from '@/constants/colors';
 import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, Pressable, useWindowDimensions, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -118,7 +119,7 @@ export default function OrdersScreen() {
 
       {isLoading ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingVertical: 40 }}>
-          <ActivityIndicator size="large" color="#F43F5E" />
+          <ActivityIndicator size="large" color={colors.brand} />
         </View>
       ) : isError ? (
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
