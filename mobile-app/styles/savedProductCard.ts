@@ -54,7 +54,7 @@ export const savedProductCardStyles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   price: {
-    fontSize: 20,
+    fontSize: 15,
     fontWeight: '800',
     color: '#F43F5E',
   },

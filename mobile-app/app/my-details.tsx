@@ -334,7 +334,7 @@ export default function MyDetailsScreen() {
                       phoneNumber.trim().length > 0;
 
   const handleSave = async () => {
-    if (!isFormValid) return;
+    if (!isFormValid || updateProfile.isPending) return;
     try {
       await updateProfile.mutateAsync({
         firstName: firstName.trim() || undefined,
@@ -344,8 +344,12 @@ export default function MyDetailsScreen() {
         gender: gender || undefined,
       });
       router.back();
-    } catch (_err) {
-      // Error could be shown in UI
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message ||
+        err?.message ||
+        'Something went wrong. Please try again.';
+      Alert.alert('Could not save', message);
     }
   };
 
@@ -562,7 +566,7 @@ export default function MyDetailsScreen() {
           <Pressable
             style={styles.saveButton}
             onPress={handleSave}
-            disabled={!isFormValid}
+            disabled={!isFormValid || updateProfile.isPending}
           >
             {({ pressed }) => (
               <View style={[
@@ -570,13 +574,17 @@ export default function MyDetailsScreen() {
                 isFormValid && styles.saveButtonActive,
                 { opacity: pressed ? 0.9 : 1 }
               ]}>
-                <Text style={[
-                  styles.saveButtonText,
-                  isFormValid && styles.saveButtonTextActive,
-                  { fontSize: Math.round(16 * scale) }
-                ]}>
-                  Save Details
-                </Text>
+                {updateProfile.isPending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={[
+                    styles.saveButtonText,
+                    isFormValid && styles.saveButtonTextActive,
+                    { fontSize: Math.round(16 * scale) }
+                  ]}>
+                    Save Details
+                  </Text>
+                )}
               </View>
             )}
           </Pressable>

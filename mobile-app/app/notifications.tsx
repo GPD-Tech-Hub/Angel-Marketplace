@@ -1,13 +1,14 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
-  ScrollView,
+  FlatList,
   Pressable,
   Switch,
-  useWindowDimensions,
   ActivityIndicator,
   RefreshControl,
+  StyleSheet,
+  ListRenderItemInfo,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -17,231 +18,306 @@ import {
   useNotificationSettings,
   useUpdateNotificationSettings,
   useMarkNotificationRead,
+  useMarkAllNotificationsRead,
 } from '@/queries';
-import { notificationsSettingsStyles as styles } from '@/styles/notificationsSettings';
+import type { NotificationItem } from '@/services/notifications.service';
+import { colors } from '@/constants/colors';
 
-const SETTINGS_CONFIG: { id: keyof typeof DEFAULT_SETTINGS; label: string }[] = [
-  { id: 'general', label: 'General Notifications' },
-  { id: 'sound', label: 'Sound' },
-  { id: 'vibrate', label: 'Vibrate' },
-  { id: 'specialOffer', label: 'Special Offer' },
-  { id: 'promoDiscounts', label: 'Promo & Discounts' },
-  { id: 'payments', label: 'Payments' },
-  { id: 'cashback', label: 'Cashback' },
-  { id: 'appUpdates', label: 'App Updates' },
-  { id: 'newService', label: 'New Service Available' },
-  { id: 'newTips', label: 'New Tips Available' },
+// ── Notification type → icon + tint ─────────────────────────────────────────
+function notifIcon(type: string): { name: React.ComponentProps<typeof Ionicons>['name']; tint: string } {
+  switch (type) {
+    case 'order':    return { name: 'bag-check-outline',    tint: '#10B981' };
+    case 'payment':  return { name: 'card-outline',         tint: '#3B82F6' };
+    case 'promo':    return { name: 'pricetag-outline',     tint: '#F59E0B' };
+    case 'cancel':   return { name: 'close-circle-outline', tint: '#EF4444' };
+    default:         return { name: 'notifications-outline', tint: colors.brand };
+  }
+}
+
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins  = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days  = Math.floor(diff / 86400000);
+  if (mins < 1)   return 'Just now';
+  if (mins < 60)  return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7)   return `${days}d ago`;
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+// ── Settings config ──────────────────────────────────────────────────────────
+type SettingKey = 'general' | 'sound' | 'vibrate' | 'specialOffer' | 'promoDiscounts' |
+                  'payments' | 'cashback' | 'appUpdates' | 'newService' | 'newTips';
+
+const SETTINGS_CONFIG: { id: SettingKey; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+  { id: 'general',       label: 'General',           icon: 'notifications-outline' },
+  { id: 'sound',         label: 'Sound',             icon: 'volume-high-outline' },
+  { id: 'vibrate',       label: 'Vibrate',           icon: 'phone-portrait-outline' },
+  { id: 'specialOffer',  label: 'Special Offers',    icon: 'gift-outline' },
+  { id: 'promoDiscounts',label: 'Promos & Discounts',icon: 'pricetag-outline' },
+  { id: 'payments',      label: 'Payments',          icon: 'card-outline' },
+  { id: 'cashback',      label: 'Cashback',          icon: 'cash-outline' },
+  { id: 'appUpdates',    label: 'App Updates',       icon: 'refresh-outline' },
+  { id: 'newService',    label: 'New Services',      icon: 'sparkles-outline' },
+  { id: 'newTips',       label: 'Tips & Guides',     icon: 'bulb-outline' },
 ];
 
-const DEFAULT_SETTINGS = {
-  general: true,
-  sound: true,
-  vibrate: true,
-  specialOffer: true,
-  promoDiscounts: true,
-  payments: true,
-  cashback: true,
-  appUpdates: false,
-  newService: true,
-  newTips: false,
+const DEFAULT_SETTINGS: Record<SettingKey, boolean> = {
+  general: true, sound: true, vibrate: true, specialOffer: true,
+  promoDiscounts: true, payments: true, cashback: true,
+  appUpdates: false, newService: true, newTips: false,
 };
 
-export default function NotificationsScreen() {
-  const router = useRouter();
-  const { width } = useWindowDimensions();
-  const scale = Math.max(0.9, Math.min(1.0, width / 390));
-
-  const { data: settingsData, isLoading, isError, error } = useNotificationSettings();
-  const updateSettings = useUpdateNotificationSettings();
-  const {
-    data: notificationsData,
-    refetch: refetchNotifications,
-    isRefetching: isRefetchingNotifications,
-  } = useNotifications({
-    refetchInterval: 60 * 1000,
-  });
-  const markRead = useMarkNotificationRead();
-
-  const notifications = notificationsData?.notifications ?? [];
-  const formatDate = (iso: string) => {
-    const d = new Date(iso);
-    const now = new Date();
-    const diff = now.getTime() - d.getTime();
-    if (diff < 86400000) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    if (diff < 604800000) return d.toLocaleDateString([], { weekday: 'short' });
-    return d.toLocaleDateString();
-  };
-
-  const settings = useMemo(() => {
-    const fromApi = settingsData ?? DEFAULT_SETTINGS;
-    return SETTINGS_CONFIG.map(({ id, label }) => ({
-      id,
-      label,
-      enabled: fromApi[id] ?? DEFAULT_SETTINGS[id],
-    }));
-  }, [settingsData]);
-
-  const handleToggle = (id: string, currentValue: boolean) => {
-    const key = id as keyof typeof DEFAULT_SETTINGS;
-    updateSettings.mutate({ [key]: !currentValue });
-  };
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="chevron-back" size={24} color="#111827" />
-          </Pressable>
-          <Text style={[styles.headerTitle, { fontSize: Math.round(20 * scale) }]}>
-            Notifications
-          </Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#F43F5E" />
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (isError) {
-    return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => router.back()} hitSlop={10}>
-            <Ionicons name="chevron-back" size={24} color="#111827" />
-          </Pressable>
-          <Text style={[styles.headerTitle, { fontSize: Math.round(20 * scale) }]}>
-            Notifications
-          </Text>
-          <View style={styles.headerSpacer} />
-        </View>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
-          <Text style={{ color: '#6B7280', textAlign: 'center' }}>
-            {(error as Error)?.message ?? 'Failed to load notification settings'}
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
+// ── Single notification row ─────────────────────────────────────────────────
+function NotifRow({ item, onPress }: { item: NotificationItem; onPress: (id: string) => void }) {
+  const { name, tint } = notifIcon(item.type);
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-          hitSlop={10}
-        >
-          {({ pressed }) => (
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color="#111827"
-              style={{ opacity: pressed ? 0.7 : 1 }}
-            />
-          )}
-        </Pressable>
-        <Text style={[styles.headerTitle, { fontSize: Math.round(20 * scale) }]}>
-          Notifications
-        </Text>
-        <View style={styles.headerSpacer} />
+    <Pressable
+      style={({ pressed }) => [s.notifRow, !item.read && s.notifRowUnread, { opacity: pressed ? 0.85 : 1 }]}
+      onPress={() => !item.read && onPress(item.id)}
+    >
+      {/* Icon bubble */}
+      <View style={[s.iconBubble, { backgroundColor: tint + '18' }]}>
+        <Ionicons name={name} size={20} color={tint} />
       </View>
 
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={isRefetchingNotifications}
-            onRefresh={() => refetchNotifications()}
-            tintColor="#F43F5E"
-          />
-        }
-      >
-        {/* Recent notifications */}
-        {notifications.length > 0 && (
-          <View style={{ marginBottom: 24 }}>
-            <Text
-              style={{
-                fontSize: Math.round(16 * scale),
-                fontWeight: '600',
-                color: '#111827',
-                marginBottom: 12,
-                paddingHorizontal: 20,
-              }}
-            >
-              Recent
-            </Text>
-            {notifications.slice(0, 10).map((n) => (
-              <Pressable
-                key={n.id}
-                onPress={() => !n.read && markRead.mutate(n.id)}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  paddingHorizontal: 20,
-                  paddingVertical: 12,
-                  backgroundColor: n.read ? undefined : '#FEF2F2',
-                }}
-              >
-                <Ionicons
-                  name={n.read ? 'mail-open-outline' : 'mail-unread-outline'}
-                  size={22}
-                  color="#6B7280"
-                  style={{ marginRight: 12 }}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: '600', color: '#111827', fontSize: 14 }}>
-                    {n.title}
-                  </Text>
-                  <Text
-                    style={{ color: '#6B7280', fontSize: 13, marginTop: 2 }}
-                    numberOfLines={2}
-                  >
-                    {n.message}
-                  </Text>
-                  <Text style={{ color: '#9CA3AF', fontSize: 12, marginTop: 4 }}>
-                    {formatDate(n.createdAt)}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        )}
+      {/* Content */}
+      <View style={s.notifContent}>
+        <View style={s.notifTitleRow}>
+          <Text style={[s.notifTitle, !item.read && s.notifTitleUnread]} numberOfLines={1}>
+            {item.title}
+          </Text>
+          <Text style={s.notifTime}>{relativeTime(item.createdAt)}</Text>
+        </View>
+        <Text style={s.notifMessage} numberOfLines={2}>{item.message}</Text>
+      </View>
 
-        <Text
-          style={{
-            fontSize: Math.round(16 * scale),
-            fontWeight: '600',
-            color: '#111827',
-            marginBottom: 12,
-            paddingHorizontal: 20,
-          }}
-        >
-          Settings
+      {/* Unread dot */}
+      {!item.read && <View style={s.unreadDot} />}
+    </Pressable>
+  );
+}
+
+// ── Main screen ─────────────────────────────────────────────────────────────
+export default function NotificationsScreen() {
+  const router = useRouter();
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const {
+    data: notifData,
+    isLoading: notifLoading,
+    isRefetching,
+    refetch,
+  } = useNotifications({ refetchInterval: 60_000 });
+
+  const { data: settingsData } = useNotificationSettings();
+  const updateSettings   = useUpdateNotificationSettings();
+  const markRead         = useMarkNotificationRead();
+  const markAllRead      = useMarkAllNotificationsRead();
+
+  const notifications = notifData?.notifications ?? [];
+  const unreadCount   = notifData?.unreadCount ?? 0;
+
+  const settings = useMemo(() =>
+    SETTINGS_CONFIG.map(({ id, label, icon }) => ({
+      id, label, icon,
+      enabled: settingsData ? (settingsData[id] ?? DEFAULT_SETTINGS[id]) : DEFAULT_SETTINGS[id],
+    })),
+    [settingsData]
+  );
+
+  // ── List header: "Mark all" button ──────────────────────────────────────
+  const ListHeader = useMemo(() => {
+    if (notifications.length === 0) return null;
+    return (
+      <View style={s.listHeader}>
+        <Text style={s.listHeaderLabel}>
+          {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
         </Text>
-        {settings.map((setting, index) => (
-          <View key={setting.id}>
-            <View style={styles.settingItem}>
-              <Text style={[styles.settingLabel, { fontSize: Math.round(16 * scale) }]}>
-                {setting.label}
-              </Text>
-              <Switch
-                value={setting.enabled}
-                onValueChange={() => handleToggle(setting.id, setting.enabled)}
-                trackColor={{ false: '#E5E7EB', true: '#F43F5E' }}
-                thumbColor="#FFFFFF"
-                ios_backgroundColor="#E5E7EB"
-                disabled={updateSettings.isPending}
-              />
+        {unreadCount > 0 && (
+          <Pressable
+            onPress={() => markAllRead.mutate()}
+            disabled={markAllRead.isPending}
+            hitSlop={8}
+          >
+            <Text style={s.markAllText}>Mark all read</Text>
+          </Pressable>
+        )}
+      </View>
+    );
+  }, [notifications.length, unreadCount, markAllRead]);
+
+  // ── Settings accordion footer ────────────────────────────────────────────
+  const ListFooter = (
+    <View style={s.settingsSection}>
+      <Pressable style={s.settingsHeader} onPress={() => setSettingsOpen((v) => !v)}>
+        <View style={s.settingsHeaderLeft}>
+          <Ionicons name="settings-outline" size={18} color={colors.gray[600]} />
+          <Text style={s.settingsHeaderText}>Notification Settings</Text>
+        </View>
+        <Ionicons
+          name={settingsOpen ? 'chevron-up' : 'chevron-down'}
+          size={18}
+          color={colors.gray[400]}
+        />
+      </Pressable>
+
+      {settingsOpen && settings.map((setting, i) => (
+        <View key={setting.id}>
+          <View style={s.settingRow}>
+            <View style={s.settingLeft}>
+              <Ionicons name={setting.icon} size={16} color={colors.gray[500]} style={s.settingIcon} />
+              <Text style={s.settingLabel}>{setting.label}</Text>
             </View>
-            {index < settings.length - 1 && <View style={styles.separator} />}
+            <Switch
+              value={setting.enabled}
+              onValueChange={() => updateSettings.mutate({ [setting.id]: !setting.enabled })}
+              trackColor={{ false: colors.gray[200], true: colors.brand }}
+              thumbColor="#fff"
+              ios_backgroundColor={colors.gray[200]}
+              disabled={updateSettings.isPending}
+            />
           </View>
-        ))}
-      </ScrollView>
+          {i < settings.length - 1 && <View style={s.divider} />}
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderItem = ({ item }: ListRenderItemInfo<NotificationItem>) => (
+    <NotifRow item={item} onPress={(id) => markRead.mutate(id)} />
+  );
+
+  return (
+    <SafeAreaView style={s.screen} edges={['top']}>
+      {/* ── Header ── */}
+      <View style={s.header}>
+        <Pressable style={s.backBtn} onPress={() => router.back()} hitSlop={10}>
+          {({ pressed }) => (
+            <Ionicons name="chevron-back" size={24} color={colors.gray[900]} style={{ opacity: pressed ? 0.6 : 1 }} />
+          )}
+        </Pressable>
+        <Text style={s.headerTitle}>Notifications</Text>
+        <View style={s.headerSpacer} />
+      </View>
+
+      {/* ── Body ── */}
+      {notifLoading ? (
+        <View style={s.center}>
+          <ActivityIndicator size="large" color={colors.brand} />
+        </View>
+      ) : (
+        <FlatList
+          data={notifications}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          ListHeaderComponent={ListHeader}
+          ListEmptyComponent={
+            <View style={s.emptyWrap}>
+              <View style={s.emptyIconWrap}>
+                <Ionicons name="notifications-outline" size={36} color={colors.brand} />
+              </View>
+              <Text style={s.emptyTitle}>No notifications yet</Text>
+              <Text style={s.emptyBody}>
+                Order updates, offers, and account activity will appear here.
+              </Text>
+            </View>
+          }
+          ListFooterComponent={ListFooter}
+          contentContainerStyle={s.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor={colors.brand}
+              colors={[colors.brand]}
+            />
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
+
+// ── Styles ───────────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: '#FAFAFA' },
+
+  // Header
+  header:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12, backgroundColor: '#FAFAFA' },
+  backBtn:      { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  headerTitle:  { fontSize: 20, fontWeight: '700', color: colors.gray[900] },
+  headerSpacer: { width: 40 },
+
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  listContent: { paddingBottom: 40 },
+
+  // List header (unread count + mark all)
+  listHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingTop: 4, paddingBottom: 10,
+  },
+  listHeaderLabel: { fontSize: 13, fontWeight: '600', color: colors.gray[500] },
+  markAllText:     { fontSize: 13, fontWeight: '700', color: colors.brand },
+
+  // Notification row
+  notifRow: {
+    flexDirection: 'row', alignItems: 'flex-start',
+    paddingHorizontal: 20, paddingVertical: 14,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1, borderBottomColor: colors.gray[100],
+  },
+  notifRowUnread: {
+    backgroundColor: '#FEF7F8',
+  },
+  iconBubble: {
+    width: 42, height: 42, borderRadius: 21,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 12, flexShrink: 0,
+  },
+  notifContent:   { flex: 1 },
+  notifTitleRow:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 },
+  notifTitle:     { fontSize: 14, fontWeight: '500', color: colors.gray[700], flex: 1, marginRight: 8 },
+  notifTitleUnread: { fontWeight: '700', color: colors.gray[900] },
+  notifMessage:   { fontSize: 13, color: colors.gray[500], lineHeight: 18 },
+  notifTime:      { fontSize: 11, color: colors.gray[400], flexShrink: 0 },
+  unreadDot: {
+    width: 8, height: 8, borderRadius: 4,
+    backgroundColor: colors.brand,
+    marginTop: 6, marginLeft: 10, flexShrink: 0,
+  },
+
+  // Empty state
+  emptyWrap:    { alignItems: 'center', paddingTop: 60, paddingHorizontal: 40 },
+  emptyIconWrap:{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#FEF2F4', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyTitle:   { fontSize: 17, fontWeight: '700', color: colors.gray[800], marginBottom: 8, textAlign: 'center' },
+  emptyBody:    { fontSize: 14, color: colors.gray[500], textAlign: 'center', lineHeight: 20 },
+
+  // Settings accordion
+  settingsSection: {
+    marginTop: 16, marginHorizontal: 16,
+    backgroundColor: '#fff',
+    borderRadius: 14,
+    borderWidth: 1, borderColor: colors.gray[100],
+    overflow: 'hidden',
+    marginBottom: 16,
+  },
+  settingsHeader: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 14,
+  },
+  settingsHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  settingsHeaderText: { fontSize: 15, fontWeight: '700', color: colors.gray[800] },
+
+  settingRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 12,
+  },
+  settingLeft:  { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  settingIcon:  { marginRight: 12 },
+  settingLabel: { fontSize: 14, fontWeight: '500', color: colors.gray[700] },
+  divider:      { height: 1, backgroundColor: colors.gray[100], marginLeft: 44 },
+});

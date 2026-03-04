@@ -61,6 +61,10 @@ export const notificationsService = {
     return response.data.data;
   },
 
+  async markAllAsRead(): Promise<void> {
+    await api.patch(ENDPOINTS.NOTIFICATIONS.MARK_ALL_READ);
+  },
+
   async getSettings(): Promise<NotificationSettingsData> {
     const response = await api.get<ApiResponse<NotificationSettingsData>>(
       ENDPOINTS.NOTIFICATIONS.SETTINGS
