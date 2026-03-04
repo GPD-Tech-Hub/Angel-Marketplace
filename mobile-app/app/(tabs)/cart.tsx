@@ -28,7 +28,7 @@ export default function CartScreen() {
   const items: CartItem[] = useApiCart ? (apiCart.items ?? []) : storeItems;
   const subtotal = useApiCart
     ? (apiCart.items ?? []).reduce((sum, i) => sum + i.price * i.quantity, 0)
-    : storeSubtotal();
+    : storeSubtotal;
 
   const handleApiIncrement = (item: CartItem) => {
     updateCartItem.mutate({ itemId: item.id, payload: { quantity: item.quantity + 1 } });

@@ -2,6 +2,7 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { config } from '@/constants/config';
 import { ENDPOINTS } from '@/constants/endpoints';
 import { secureStorage, STORAGE_KEYS } from '@/utils/storage';
+import { useAuthStore } from '@/store';
 
 // Create axios instance
 export const api = axios.create({
@@ -61,11 +62,9 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        // Refresh failed - clear tokens and redirect to login
         await secureStorage.removeItem(STORAGE_KEYS.ACCESS_TOKEN);
         await secureStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
-        
-        // You can emit an event or use a store to handle logout
+        await useAuthStore.getState().logout();
         return Promise.reject(refreshError);
       }
     }

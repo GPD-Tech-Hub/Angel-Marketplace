@@ -62,11 +62,13 @@ export const useAuthStore = create<AuthState>()(
         try {
           const accessToken = await secureStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN);
           if (accessToken) {
-            // Token exists, user state will be restored from persist
             set({ isAuthenticated: true });
+          } else {
+            set({ user: null, isAuthenticated: false });
           }
         } catch (error) {
           console.error('Auth initialization error:', error);
+          set({ user: null, isAuthenticated: false });
         } finally {
           set({ isLoading: false, isInitialized: true });
         }

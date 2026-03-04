@@ -1,4 +1,4 @@
-// Backend API base URL (no trailing slash). Override with EXPO_PUBLIC_API_URL in .env if needed.
+// Backend API base URL (no trailing slash). Use HTTPS for hosted backend.
 const DEFAULT_API_URL = 'http://ygkgc0o00cg4w4408k840og0.102.219.189.97.sslip.io/api';
 
 // Environment-based configuration

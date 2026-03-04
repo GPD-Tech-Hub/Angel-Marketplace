@@ -37,8 +37,9 @@ export default function RootLayout() {
                 headerShown: false,
                 animation: 'slide_from_right',
               }}
-              initialRouteName="(auth)"
+              initialRouteName="index"
             >
+              <Stack.Screen name="index" />
               <Stack.Screen name="(auth)" />
               <Stack.Screen name="(tabs)" />
               <Stack.Screen 

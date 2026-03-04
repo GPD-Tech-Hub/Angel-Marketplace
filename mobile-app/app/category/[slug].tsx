@@ -32,7 +32,7 @@ export default function CategoryScreen() {
       <View className="flex-1 bg-gray-50">
         {isLoading ? (
           <View className="flex-1 items-center justify-center">
-            <ActivityIndicator size="large" color="#0ea5e9" />
+            <ActivityIndicator size="large" color="#F43F5E" />
           </View>
         ) : (
           <ProductGrid

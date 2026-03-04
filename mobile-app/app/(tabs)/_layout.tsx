@@ -52,7 +52,7 @@ export default function TabLayout() {
           name="categories"
           options={{
             title: 'Categories',
-            headerShown: true,
+            headerShown: false,
           }}
         />
         <Tabs.Screen
