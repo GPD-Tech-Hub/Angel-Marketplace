@@ -47,6 +47,14 @@ export const cartScreenStyles = StyleSheet.create({
   headerSpacer: {
     width: 38,
   },
+  clearButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
   // ── Scroll ────────────────────────────────────────
   scrollView: {

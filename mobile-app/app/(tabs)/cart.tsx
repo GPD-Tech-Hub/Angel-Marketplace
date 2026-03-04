@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, RefreshControl, Alert } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
@@ -9,7 +9,7 @@ import { CartItemCard, OrderSummary, CheckoutButton } from '@/components/cart';
 import { CartItem } from '@/types';
 import { cartScreenStyles as styles } from '@/styles/cartScreen';
 import { useAuthStore } from '@/store';
-import { useCartQuery, useUpdateCartItem, useRemoveCartItem } from '@/queries';
+import { useCartQuery, useUpdateCartItem, useRemoveCartItem, useClearCart } from '@/queries';
 import { colors } from '@/constants/colors';
 
 export default function CartScreen() {
@@ -20,7 +20,8 @@ export default function CartScreen() {
   const { data: apiCart, isLoading: cartLoading, refetch } = useCartQuery({ enabled: isAuthenticated });
   const updateCartItem = useUpdateCartItem();
   const removeCartItem = useRemoveCartItem();
-  const { items: storeItems, subtotal: storeSubtotal } = useCart();
+  const clearCartMutation = useClearCart();
+  const { items: storeItems, subtotal: storeSubtotal, clearCart: clearLocalCart } = useCart();
 
   const [refreshing, setRefreshing] = useState(false);
 
@@ -47,6 +48,24 @@ export default function CartScreen() {
   // Removal confirmation is handled inside CartItemCard via Alert
   const handleApiRemove = (item: CartItem) => removeCartItem.mutate(item.id);
 
+  const handleClearCart = () => {
+    Alert.alert(
+      'Empty Cart',
+      'Remove all items from your cart?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Empty Cart',
+          style: 'destructive',
+          onPress: () => {
+            if (isAuthenticated) clearCartMutation.mutate();
+            else clearLocalCart();
+          },
+        },
+      ]
+    );
+  };
+
   const SHIPPING_FEE = 5;
   const total = subtotal + SHIPPING_FEE;
 
@@ -63,9 +82,11 @@ export default function CartScreen() {
         <Text style={styles.headerTitle}>My Cart</Text>
 
         {items.length > 0 ? (
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>{items.length}</Text>
-          </View>
+          <Pressable style={styles.clearButton} onPress={handleClearCart} hitSlop={10}>
+            {({ pressed }) => (
+              <Ionicons name="trash-outline" size={20} color={colors.error} style={{ opacity: pressed ? 0.5 : 1 }} />
+            )}
+          </Pressable>
         ) : (
           <View style={styles.headerSpacer} />
         )}
