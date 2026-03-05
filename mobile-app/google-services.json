@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1074093395101",
+    "project_id": "rhapsody-tv",
+    "storage_bucket": "rhapsody-tv.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1074093395101:android:691e05f57ea6878b149874",
+        "android_client_info": {
+          "package_name": "com.angelmarketplace.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhjRii-ds2kFfu3dFG42XTGFR_6zolOF4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1074093395101:android:3854467e67310b08149874",
+        "android_client_info": {
+          "package_name": "com.rhapsodytv.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDhjRii-ds2kFfu3dFG42XTGFR_6zolOF4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

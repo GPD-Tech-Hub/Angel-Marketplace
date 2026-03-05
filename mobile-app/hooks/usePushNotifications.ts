@@ -1,25 +1,64 @@
 import { useEffect, useRef } from 'react';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import Constants from 'expo-constants';
 import { useAuthStore } from '@/store/authStore';
 import api from '@/services/api';
 
 export function usePushNotifications() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const registeredRef = useRef(false);
+  const registeredTokenRef = useRef<string | null>(null);
+  const inFlightRef = useRef(false);
 
-  useEffect(() => {
-    if (!isAuthenticated || registeredRef.current) {
-      return;
+  function getProjectId(): string | undefined {
+    const maybeConstants = Constants as unknown as {
+      easConfig?: { projectId?: string };
+      expoConfig?: { extra?: { eas?: { projectId?: string } } };
+    };
+
+    return (
+      maybeConstants.easConfig?.projectId ||
+      maybeConstants.expoConfig?.extra?.eas?.projectId ||
+      process.env.EXPO_PUBLIC_PROJECT_ID
+    );
+  }
+
+  function normalizeTokenData(
+    tokenData: { data: unknown; type?: string } | null | undefined,
+  ): string | null {
+    if (!tokenData) {
+      return null;
     }
 
+    if (typeof tokenData.data === 'string') {
+      return tokenData.data;
+    }
+
+    if (
+      tokenData.data &&
+      typeof tokenData.data === 'object' &&
+      'token' in tokenData.data &&
+      typeof (tokenData.data as { token?: unknown }).token === 'string'
+    ) {
+      return (tokenData.data as { token: string }).token;
+    }
+
+    return null;
+  }
+
+  useEffect(() => {
     async function register() {
+      if (!isAuthenticated || inFlightRef.current) {
+        return false;
+      }
+
       try {
         // Expo Go is not a reliable target for this notifications setup.
         if (Constants.appOwnership === 'expo') {
           console.log('[Push] Skipped in Expo Go');
-          return;
+          return false;
         }
+
+        inFlightRef.current = true;
 
         const Notifications = await import('expo-notifications');
         const Device = await import('expo-device');
@@ -36,7 +75,7 @@ export function usePushNotifications() {
 
         if (!Device.isDevice) {
           console.log('[Push] Skipped: not a physical device');
-          return;
+          return false;
         }
 
         const { status: existing } = await Notifications.getPermissionsAsync();
@@ -49,7 +88,7 @@ export function usePushNotifications() {
 
         if (finalStatus !== 'granted') {
           console.log('[Push] Permission denied');
-          return;
+          return false;
         }
 
         if (Platform.OS === 'android') {
@@ -62,23 +101,52 @@ export function usePushNotifications() {
           });
         }
 
-        const tokenData = await Notifications.getExpoPushTokenAsync({
-          projectId: process.env.EXPO_PUBLIC_PROJECT_ID,
-        });
+        const tokenData =
+          Platform.OS === 'android'
+            ? await Notifications.getDevicePushTokenAsync()
+            : (
+                getProjectId()
+                  ? await Notifications.getExpoPushTokenAsync({ projectId: getProjectId() })
+                  : await Notifications.getExpoPushTokenAsync()
+              );
 
-        await api.patch('/users/push-token', { pushToken: tokenData.data });
-        registeredRef.current = true;
+        const pushToken = normalizeTokenData(tokenData);
+        if (!pushToken) {
+          return false;
+        }
+
+        if (registeredTokenRef.current === pushToken) {
+          return true;
+        }
+
+        await api.patch('/users/push-token', { pushToken });
+        registeredTokenRef.current = pushToken;
+        return true;
       } catch (err) {
         console.warn('[Push] Registration failed:', err);
+        return false;
+      } finally {
+        inFlightRef.current = false;
       }
     }
 
-    register();
+    void register();
+
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        void register();
+      }
+    });
+
+    return () => {
+      sub.remove();
+    };
   }, [isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthenticated) {
-      registeredRef.current = false;
+      registeredTokenRef.current = null;
+      inFlightRef.current = false;
     }
   }, [isAuthenticated]);
 }
