@@ -148,18 +148,20 @@ function NotifRow({
         pressed && s.rowPressed,
       ]}
     >
-      {unread ? <View style={s.unreadBar} /> : null}
-
       <View style={[s.iconBubble, { backgroundColor: bg }]}>
         <Ionicons name={name} size={22} color={tint} />
       </View>
 
       <View style={s.rowContent}>
         <View style={s.rowTop}>
-          <Text numberOfLines={1} style={[s.rowTitle, unread && s.rowTitleBold]}>
-            {item.title}
-          </Text>
-          <View style={s.rowTimePill}>
+          <View style={s.rowTitleWrap}>
+            <Text numberOfLines={1} style={[s.rowTitle, unread && s.rowTitleBold]}>
+              {item.title}
+            </Text>
+            {unread ? <View style={s.unreadDot} /> : null}
+          </View>
+
+          <View style={s.rowTimeWrap}>
             <Text style={s.rowTime}>{relativeTime(item.createdAt)}</Text>
           </View>
         </View>
@@ -498,46 +500,29 @@ const s = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 2,
+    paddingVertical: 14,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: DIVIDER,
-    borderRadius: 22,
-    position: 'relative',
-    shadowColor: '#101828',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 6 },
-    shadowRadius: 14,
-    elevation: 2,
+    borderRadius: 0,
   },
   rowUnread: {
-    backgroundColor: '#FFF9FC',
-    borderColor: '#F8BDD5',
+    backgroundColor: '#FFFBFD',
   },
   rowPressed: {
-    opacity: 0.88,
+    opacity: 0.72,
   },
   rowSeparator: {
-    height: 14,
-  },
-  unreadBar: {
-    position: 'absolute',
-    left: 0,
-    top: 12,
-    bottom: 12,
-    width: 3,
-    borderTopRightRadius: 3,
-    borderBottomRightRadius: 3,
-    backgroundColor: BRAND,
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: DIVIDER,
+    marginLeft: 62,
   },
   iconBubble: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 42,
+    height: 42,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: 14,
     flexShrink: 0,
   },
   rowContent: {
@@ -545,42 +530,54 @@ const s = StyleSheet.create({
   },
   rowTop: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 4,
+    gap: 10,
+  },
+  rowTitleWrap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
   },
   rowTitle: {
-    flex: 1,
     fontSize: 15,
     fontWeight: '600',
     color: '#4B5563',
-    marginRight: 8,
   },
   rowTitleBold: {
     fontWeight: '700',
     color: '#101828',
   },
+  unreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: BRAND,
+    marginLeft: 8,
+    flexShrink: 0,
+  },
   rowMessage: {
     fontSize: 13,
     color: '#667085',
-    lineHeight: 20,
+    lineHeight: 19,
     paddingRight: 8,
   },
-  rowTimePill: {
-    backgroundColor: '#F8F0F4',
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+  rowTimeWrap: {
+    alignItems: 'flex-end',
+    justifyContent: 'flex-start',
+    minWidth: 54,
   },
   rowTime: {
     fontSize: 11,
-    color: '#8A8390',
+    color: '#98A2B3',
     flexShrink: 0,
   },
   chevron: {
     marginLeft: 8,
     flexShrink: 0,
-    marginTop: 12,
+    marginTop: 10,
   },
   empty: {
     alignItems: 'center',
