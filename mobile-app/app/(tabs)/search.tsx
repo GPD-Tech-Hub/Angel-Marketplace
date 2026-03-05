@@ -1,9 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { DiscoverSearchBar } from '@/components/layout/DiscoverSearchBar';
 import { RecentSearches, NoResultsFound } from '@/components/search';
 import { searchScreenStyles as styles } from '@/styles/searchScreen';
@@ -14,6 +13,7 @@ import { ProductGrid } from '@/components/products';
 
 export default function SearchScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ q?: string }>();
   const [searchQuery, setSearchQuery] = useState('');
   const [submittedQuery, setSubmittedQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>([
@@ -53,6 +53,15 @@ export default function SearchScreen() {
     setSubmittedQuery(s);
   };
 
+  useEffect(() => {
+    const incomingQuery = typeof params.q === 'string' ? params.q.trim() : '';
+    if (!incomingQuery) return;
+
+    setSearchQuery((current) => (current === incomingQuery ? current : incomingQuery));
+    setSubmittedQuery((current) => (current === incomingQuery ? current : incomingQuery));
+    setRecentSearches((prev) => (prev.includes(incomingQuery) ? prev : [incomingQuery, ...prev].slice(0, 10)));
+  }, [params.q]);
+
   const handleProductPress = (product: Product) => {
     router.push({ pathname: '/product/[slug]', params: { slug: product.slug } } as any);
   };
@@ -65,16 +74,6 @@ export default function SearchScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()} hitSlop={10}>
-          {({ pressed }) => (
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color={colors.gray[900]}
-              style={{ opacity: pressed ? 0.7 : 1 }}
-            />
-          )}
-        </Pressable>
         <Text style={styles.headerTitle}>Search</Text>
         <View style={styles.headerSpacer} />
       </View>

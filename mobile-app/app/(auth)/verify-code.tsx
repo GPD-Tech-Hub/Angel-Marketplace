@@ -60,8 +60,7 @@ export default function VerifyCodeScreen() {
   return (
     <AuthScreenShell
       title="Enter 6-digit code"
-      subtitle={email ? `We sent a reset code to ${email}.` : 'Enter the code from your email to continue.'}
-      helper="This code unlocks the final password reset step."
+      subtitle={email ? `Code sent to ${email}.` : 'Enter your code.'}
       showBack
       footer={(
         <>
@@ -91,24 +90,6 @@ export default function VerifyCodeScreen() {
         </>
       )}
     >
-      <View className="mb-6 items-center rounded-[26px] border border-[#f7d7e6] bg-[#fff9fc] px-5 py-6">
-        <View className="mb-4 rounded-full bg-[#ffe4ef] px-4 py-2">
-          <Text className="text-xs font-semibold uppercase tracking-[1.5px] text-[#be185d]">
-            Security check
-          </Text>
-        </View>
-
-        <Text className="text-center text-sm leading-6 text-[#6b4455]">
-          Enter the code exactly as it appears in your inbox. It&apos;s valid for a limited time.
-        </Text>
-
-        {email ? (
-          <View className="mt-4 rounded-full border border-[#f3c4d9] bg-white px-4 py-2">
-            <Text className="text-sm font-medium text-[#7c2d56]">{email}</Text>
-          </View>
-        ) : null}
-      </View>
-
       {error ? (
         <View className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
           <Text className="text-center text-sm text-red-600">{error}</Text>
@@ -125,14 +106,13 @@ export default function VerifyCodeScreen() {
         />
       </View>
 
-      <View className="rounded-2xl bg-[#fff5f8] px-4 py-4">
-        <Text className="text-xs font-semibold uppercase tracking-[1.4px] text-[#be185d]">
-          Quick tip
-        </Text>
-        <Text className="mt-2 text-sm leading-5 text-[#6b4455]">
-          If the code does not arrive, wait a few seconds before resending so the newest message is the one you use.
-        </Text>
-      </View>
+      {email ? (
+        <View className="rounded-2xl border border-[#ece7eb] bg-[#faf7f8] px-4 py-4">
+          <Text className="text-sm leading-6 text-[#666666]">
+            Checking code for <Text className="font-semibold text-[#171717]">{email}</Text>.
+          </Text>
+        </View>
+      ) : null}
     </AuthScreenShell>
   );
 }

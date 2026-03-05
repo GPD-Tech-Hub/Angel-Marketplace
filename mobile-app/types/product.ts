@@ -3,6 +3,8 @@ export interface ProductReview {
   rating: number;
   comment?: string;
   createdAt: string;
+  verifiedPurchase?: boolean;
+  source?: 'mobile' | 'php';
   user?: { firstName: string; lastName: string };
 }
 

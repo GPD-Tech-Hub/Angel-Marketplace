@@ -106,20 +106,10 @@ export default function RegisterScreen() {
     },
   ];
 
-  const footerText = (
-    <Text className="text-sm text-gray-600 text-center">
-      By signing up you agree to our{' '}
-      <Text className="text-[#F43F5E]">Terms</Text>,{' '}
-      <Text className="text-[#F43F5E]">Privacy Policy</Text>, and{' '}
-      <Text className="text-[#F43F5E]">Cookie Use</Text>
-    </Text>
-  );
-
   return (
     <AuthScreenShell
-      title="Create your shopper account"
-      subtitle="Join Angel Marketplace to save products, place orders faster, and keep everything synced across devices."
-      helper="Set up with email or step in quickly with KingsChat."
+      title="Create account"
+      subtitle="Sign up to continue."
       footer={(
         <>
           <FormButton
@@ -176,15 +166,6 @@ export default function RegisterScreen() {
         </View>
       )}
 
-      <View className="mb-5 rounded-2xl bg-[#fff5f8] px-4 py-4">
-        <Text className="text-xs font-semibold uppercase tracking-[1.4px] text-[#be185d]">
-          New here
-        </Text>
-        <Text className="mt-2 text-sm leading-5 text-[#6b4455]">
-          Create a clean profile now and your wishlist, cart, and checkout details will follow you everywhere.
-        </Text>
-      </View>
-
       {formFields.map((field) => (
         <FormField
           key={field.name}
@@ -200,9 +181,6 @@ export default function RegisterScreen() {
         />
       ))}
 
-      <View className="mt-2">
-        {footerText}
-      </View>
     </AuthScreenShell>
   );
 }

@@ -29,7 +29,7 @@ function resolveAdUrl(ad: Ad): string | null {
     case 'category':
       return ad.categorySlug ? `/category/${ad.categorySlug}` : null;
     case 'search':
-      return ad.searchQuery ? `/search?q=${encodeURIComponent(ad.searchQuery)}` : null;
+      return ad.searchQuery ? `/(tabs)/search?q=${encodeURIComponent(ad.searchQuery)}` : null;
     case 'product':
       return ad.productId ? `/product/${ad.productId}` : null;
     default:

@@ -93,13 +93,7 @@ export default function CartScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()} hitSlop={10}>
-          {({ pressed }) => (
-            <Ionicons name="chevron-back" size={22} color={colors.gray[900]} style={{ opacity: pressed ? 0.6 : 1 }} />
-          )}
-        </Pressable>
-
-        <Text style={styles.headerTitle}>My Cart</Text>
+        <Text style={styles.headerTitle}>Cart</Text>
 
         {items.length > 0 ? (
           <Pressable style={styles.clearButton} onPress={handleClearCart} hitSlop={10}>
@@ -170,7 +164,7 @@ export default function CartScreen() {
             <Text style={styles.emptyMessage}>
               {"When you add products,\nthey'll appear here."}
             </Text>
-            <Pressable style={styles.emptyShopBtn} onPress={() => router.push('/(tabs)/categories' as any)}>
+            <Pressable style={styles.emptyShopBtn} onPress={() => router.push('/(tabs)/shop' as any)}>
               {({ pressed }) => (
                 <Text style={[styles.emptyShopBtnText, { opacity: pressed ? 0.8 : 1 }]}>
                   Start Shopping

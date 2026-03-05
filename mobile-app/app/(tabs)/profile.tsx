@@ -119,23 +119,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          style={styles.backButton}
-          onPress={() => router.back()}
-          hitSlop={10}
-        >
-          {({ pressed }) => (
-            <Ionicons
-              name="chevron-back"
-              size={24}
-              color="#111827"
-              style={{ opacity: pressed ? 0.7 : 1 }}
-            />
-          )}
-        </Pressable>
-        <Text style={[styles.headerTitle, { fontSize: Math.round(20 * scale) }]}>
-          Account
-        </Text>
+        <Text style={styles.headerTitle}>Account</Text>
         <View style={styles.headerSpacer} />
       </View>
 

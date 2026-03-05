@@ -80,7 +80,7 @@ export default function ForgotPasswordScreen() {
                 Forgot password
               </Text>
               <Text className="text-base text-gray-500 leading-6">
-                Enter your email address for the verification process. We will send a 4 digit code to your email
+                Enter your email address.
               </Text>
             </View>
 

@@ -14,7 +14,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Image } from 'expo-image';
 import { useProducts, useProductSearch, useCategories } from '@/queries';
 import { useCurrencyStore } from '@/store/currencyStore';
 import { DiscoverSearchBar } from '@/components/layout/DiscoverSearchBar';
@@ -43,6 +44,7 @@ function sortToParams(sort: SortOption): Pick<ProductFilters, 'sortBy' | 'sortOr
 }
 
 export default function ShopScreen() {
+  const router = useRouter();
   const { categoryId: paramCategoryId } = useLocalSearchParams<{ categoryId?: string }>();
   const { currency } = useCurrencyStore();
   const sym = currency.symbol;
@@ -171,11 +173,25 @@ export default function ShopScreen() {
       {/* ── Header ── */}
       <View style={s.header}>
         <Text style={s.title}>Shop</Text>
-        {isSearching && (
-          <Pressable onPress={handleClearSearch} hitSlop={10}>
-            <Text style={s.clearText}>Clear</Text>
+        <View style={s.headerActions}>
+          {isSearching ? (
+            <Pressable onPress={handleClearSearch} hitSlop={10}>
+              <Text style={s.clearText}>Clear</Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            style={s.iconButton}
+            onPress={() => router.push('/notifications' as any)}
+          >
+            {({ pressed }) => (
+              <Image
+                source={require('../../assets/icons/bell.png')}
+                style={[s.bellIcon, { opacity: pressed ? 0.7 : 1 }]}
+                contentFit="contain"
+              />
+            )}
           </Pressable>
-        )}
+        </View>
       </View>
 
       {/* ── Search bar ── */}
@@ -430,7 +446,10 @@ const s = StyleSheet.create({
 
   // Header
   header:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingTop: 8, paddingBottom: 10 },
-  title:     { fontSize: 26, fontWeight: '800', color: colors.gray[900], letterSpacing: -0.5 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  title:     { fontSize: 30, lineHeight: 40, fontWeight: '600', color: '#000000' },
+  iconButton: { width: 40, height: 40, borderRadius: 10, backgroundColor: '#F5F5F5', alignItems: 'center', justifyContent: 'center' },
+  bellIcon: { width: 20, height: 20 },
   clearText: { fontSize: 14, fontWeight: '600', color: colors.brand },
 
   // Search

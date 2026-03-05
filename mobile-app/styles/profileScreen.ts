@@ -9,21 +9,19 @@ export const profileScreenStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 0,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   headerTitle: {
+    fontSize: 30,
+    lineHeight: 40,
     fontWeight: '600',
     color: '#171717',
   },
   headerSpacer: {
     width: 40,
+    height: 40,
   },
   scrollView: {
     flex: 1,

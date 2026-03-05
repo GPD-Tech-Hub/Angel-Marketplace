@@ -1,53 +1,52 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState } from 'react';
 import {
-  View,
-  Text,
-  FlatList,
-  Pressable,
-  Switch,
   ActivityIndicator,
+  FlatList,
+  ListRenderItemInfo,
+  Pressable,
   RefreshControl,
   StyleSheet,
-  ListRenderItemInfo,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
-import { Ionicons } from "@expo/vector-icons";
+  Switch,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import {
   useNotifications,
   useNotificationSettings,
   useUpdateNotificationSettings,
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
-} from "@/queries";
-import type { NotificationItem } from "@/services/notifications.service";
-import { colors } from "@/constants/colors";
+} from '@/queries';
+import type { NotificationItem } from '@/services/notifications.service';
+import { colors } from '@/constants/colors';
 
-const BRAND = colors.brand; // #F43F5E
-const BRAND_LIGHT = "#FFF0F3";
-const TEXT_PRIMARY = "#111827";
-const TEXT_SECONDARY = "#6B7280";
-const TEXT_TERTIARY = "#9CA3AF";
-const DIVIDER = "#F3F4F6";
-const SCREEN_BG = "#F2F4F7";
+const BRAND = colors.brand;
+const BRAND_LIGHT = '#FFF1F5';
+const TEXT_PRIMARY = '#111827';
+const TEXT_SECONDARY = '#6B7280';
+const TEXT_TERTIARY = '#9CA3AF';
+const SCREEN_BG = '#F7F4F5';
+const DIVIDER = '#ECE7EB';
 
-// ── Type → icon ──────────────────────────────────────────────────────────────
 function notifIcon(type: string): {
-  name: React.ComponentProps<typeof Ionicons>["name"];
+  name: React.ComponentProps<typeof Ionicons>['name'];
   tint: string;
   bg: string;
 } {
   switch (type) {
-    case "order":
-      return { name: "bag-handle-outline", tint: BRAND, bg: BRAND_LIGHT };
-    case "payment":
-      return { name: "card-outline", tint: "#0284C7", bg: "#E0F2FE" };
-    case "promo":
-      return { name: "pricetag-outline", tint: "#D97706", bg: "#FEF3C7" };
-    case "cancel":
-      return { name: "close-circle-outline", tint: "#DC2626", bg: "#FEE2E2" };
+    case 'order':
+      return { name: 'bag-handle-outline', tint: BRAND, bg: BRAND_LIGHT };
+    case 'payment':
+      return { name: 'card-outline', tint: '#0284C7', bg: '#E0F2FE' };
+    case 'promo':
+      return { name: 'pricetag-outline', tint: '#D97706', bg: '#FEF3C7' };
+    case 'cancel':
+      return { name: 'close-circle-outline', tint: '#DC2626', bg: '#FEE2E2' };
     default:
-      return { name: "notifications-outline", tint: BRAND, bg: BRAND_LIGHT };
+      return { name: 'notifications-outline', tint: BRAND, bg: BRAND_LIGHT };
   }
 }
 
@@ -56,73 +55,70 @@ function relativeTime(iso: string): string {
   const mins = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-  if (mins < 1) return "Just now";
+
+  if (mins < 1) return 'Just now';
   if (mins < 60) return `${mins}m ago`;
   if (hours < 24) return `${hours}h ago`;
   if (days < 7) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
+
+  return new Date(iso).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
   });
 }
 
 function resolveNotificationRoute(item: NotificationItem): string | null {
   const data = item.data ?? {};
 
-  if (typeof data.route === "string" && data.route.length > 0) {
+  if (typeof data.route === 'string' && data.route.length > 0) {
     return data.route;
   }
 
-  if (typeof data.orderId === "string" && data.orderId.length > 0) {
+  if (typeof data.orderId === 'string' && data.orderId.length > 0) {
     return `/order/${data.orderId}`;
   }
 
-  if (typeof data.productSlug === "string" && data.productSlug.length > 0) {
+  if (typeof data.productSlug === 'string' && data.productSlug.length > 0) {
     return `/product/${data.productSlug}`;
   }
 
-  if (typeof data.categorySlug === "string" && data.categorySlug.length > 0) {
+  if (typeof data.categorySlug === 'string' && data.categorySlug.length > 0) {
     return `/category/${data.categorySlug}`;
   }
 
   switch (item.type) {
-    case "order":
-    case "payment":
-    case "cancel":
-      return null;
-    case "promo":
-      return "/(tabs)/shop";
+    case 'promo':
+      return '/(tabs)/shop';
     default:
       return null;
   }
 }
 
-// ── Settings config ───────────────────────────────────────────────────────────
-type SettingKey = "general" | "orders" | "payments";
+type SettingKey = 'general' | 'orders' | 'payments';
 
 const SETTINGS_CONFIG: {
   id: SettingKey;
   label: string;
   description: string;
-  icon: React.ComponentProps<typeof Ionicons>["name"];
+  icon: React.ComponentProps<typeof Ionicons>['name'];
 }[] = [
   {
-    id: "general",
-    label: "All Notifications",
-    description: "Master switch for all alerts",
-    icon: "notifications-outline",
+    id: 'general',
+    label: 'All Notifications',
+    description: 'Master switch for all alerts',
+    icon: 'notifications-outline',
   },
   {
-    id: "orders",
-    label: "Order Updates",
-    description: "Shipping & delivery updates",
-    icon: "bag-handle-outline",
+    id: 'orders',
+    label: 'Order Updates',
+    description: 'Shipping and delivery changes',
+    icon: 'bag-handle-outline',
   },
   {
-    id: "payments",
-    label: "Payment Alerts",
-    description: "Payment & refund confirmations",
-    icon: "card-outline",
+    id: 'payments',
+    label: 'Payment Alerts',
+    description: 'Charges, refunds, and confirmations',
+    icon: 'card-outline',
   },
 ];
 
@@ -132,7 +128,6 @@ const DEFAULT_SETTINGS: Record<SettingKey, boolean> = {
   payments: true,
 };
 
-// ── Notification row ──────────────────────────────────────────────────────────
 function NotifRow({
   item,
   onPress,
@@ -153,46 +148,39 @@ function NotifRow({
         pressed && s.rowPressed,
       ]}
     >
-      {/* Unread accent bar */}
-      {unread && <View style={s.unreadBar} />}
+      {unread ? <View style={s.unreadBar} /> : null}
 
-      {/* Icon bubble */}
       <View style={[s.iconBubble, { backgroundColor: bg }]}>
         <Ionicons name={name} size={22} color={tint} />
       </View>
 
-      {/* Text */}
       <View style={s.rowContent}>
         <View style={s.rowTop}>
-          <Text
-            numberOfLines={1}
-            style={[s.rowTitle, unread && s.rowTitleBold]}
-          >
+          <Text numberOfLines={1} style={[s.rowTitle, unread && s.rowTitleBold]}>
             {item.title}
           </Text>
           <View style={s.rowTimePill}>
             <Text style={s.rowTime}>{relativeTime(item.createdAt)}</Text>
           </View>
         </View>
+
         <Text numberOfLines={2} style={s.rowMessage}>
           {item.message}
         </Text>
       </View>
 
-      {/* Chevron */}
-      {route && (
+      {route ? (
         <Ionicons
           name="chevron-forward"
           size={16}
-          color="#9CA3AF"
+          color="#A18A96"
           style={s.chevron}
         />
-      )}
+      ) : null}
     </Pressable>
   );
 }
 
-// ── Main screen ───────────────────────────────────────────────────────────────
 export default function NotificationsScreen() {
   const router = useRouter();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -222,108 +210,124 @@ export default function NotificationsScreen() {
           ? (settingsData[id] ?? DEFAULT_SETTINGS[id])
           : DEFAULT_SETTINGS[id],
       })),
-    [settingsData],
+    [settingsData]
   );
 
-  const generalOn = settings.find((s) => s.id === "general")?.enabled ?? true;
+  const generalOn = settings.find((item) => item.id === 'general')?.enabled ?? true;
 
-  // ── List header ─────────────────────────────────────────────────────────────
-  const ListHeader = useMemo(() => {
-    if (notifications.length === 0) return null;
-    return (
-      <View style={s.listHeader}>
-        <View style={s.statusPill}>
-          <View style={[s.statusDot, unreadCount > 0 && s.statusDotUnread]} />
-          <Text style={s.listHeaderLabel}>
-            {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
-          </Text>
-        </View>
-        {unreadCount > 0 && (
+  const ListHeader = (
+    <View>
+      <View style={s.heroCard}>
+        <Text style={s.heroTitle}>Notifications</Text>
+        <Text style={s.heroBody}>
+          {unreadCount > 0
+            ? `${unreadCount} unread update${unreadCount > 1 ? 's' : ''}`
+            : 'You are all caught up.'}
+        </Text>
+        {unreadCount > 0 ? (
           <Pressable
             onPress={() => markAllRead.mutate()}
             disabled={markAllRead.isPending}
-            hitSlop={8}
-            style={({ pressed }) => [
-              s.markAllBtn,
-              pressed && s.markAllBtnPressed,
-            ]}
+            style={({ pressed }) => [s.markAllBtn, pressed && s.markAllBtnPressed]}
           >
-            <Text style={s.markAllText}>Mark all read</Text>
+            <Text style={s.markAllText}>
+              {markAllRead.isPending ? 'Updating...' : 'Mark all read'}
+            </Text>
           </Pressable>
-        )}
+        ) : null}
       </View>
-    );
-  }, [notifications.length, unreadCount, markAllRead]);
 
-  // ── Settings footer ──────────────────────────────────────────────────────────
-  const ListFooter = (
-    <View style={s.settingsCard}>
-      <Pressable
-        style={s.settingsCardHeader}
-        onPress={() => setSettingsOpen((v) => !v)}
-      >
-        <View style={s.settingsLeft}>
-          <View style={[s.settingIconWrap, { backgroundColor: BRAND_LIGHT }]}>
-            <Ionicons name="settings-outline" size={16} color={BRAND} />
-          </View>
-          <Text style={s.settingsTitle}>Notification Settings</Text>
+      {notifications.length > 0 ? (
+        <View style={s.sectionHeader}>
+          <Text style={s.sectionTitle}>Latest activity</Text>
+          <Text style={s.sectionCaption}>
+            Tap any item to jump into the related part of your account.
+          </Text>
         </View>
-        <Ionicons
-          name={settingsOpen ? "chevron-up" : "chevron-down"}
-          size={18}
-          color={TEXT_TERTIARY}
-        />
-      </Pressable>
+      ) : null}
+    </View>
+  );
 
-      {settingsOpen &&
-        settings.map((setting) => {
-          const isSub = setting.id !== "general";
-          const isDisabled = updateSettings.isPending || (isSub && !generalOn);
-          return (
-            <View key={setting.id}>
-              <View style={s.divider} />
-              <View style={[s.settingRow, isDisabled && s.settingRowDimmed]}>
-                <View
-                  style={[
-                    s.settingIconWrap,
-                    {
-                      backgroundColor:
-                        setting.enabled && !isDisabled ? BRAND_LIGHT : DIVIDER,
-                    },
-                  ]}
-                >
-                  <Ionicons
-                    name={setting.icon}
-                    size={16}
-                    color={
-                      setting.enabled && !isDisabled ? BRAND : TEXT_TERTIARY
-                    }
-                  />
-                </View>
-                <View style={s.settingTextWrap}>
-                  <Text style={s.settingLabel}>{setting.label}</Text>
-                  <Text style={s.settingDesc}>{setting.description}</Text>
-                </View>
-                <Switch
-                  value={setting.enabled}
-                  onValueChange={() =>
-                    updateSettings.mutate({ [setting.id]: !setting.enabled })
-                  }
-                  trackColor={{ false: DIVIDER, true: BRAND }}
-                  thumbColor="#fff"
-                  ios_backgroundColor={DIVIDER}
-                  disabled={isDisabled}
-                />
-              </View>
+  const ListFooter = (
+    <View style={s.footerWrap}>
+      <View style={s.settingsCard}>
+        <Pressable
+          style={s.settingsCardHeader}
+          onPress={() => setSettingsOpen((value) => !value)}
+        >
+          <View style={s.settingsLeft}>
+            <View style={[s.settingIconWrap, { backgroundColor: BRAND_LIGHT }]}>
+              <Ionicons name="settings-outline" size={16} color={BRAND} />
             </View>
-          );
-        })}
+
+            <View>
+              <Text style={s.settingsTitle}>Notification Settings</Text>
+              <Text style={s.settingsSubtitle}>
+                {settingsOpen ? 'Tap to collapse' : 'Tap to manage alerts'}
+              </Text>
+            </View>
+          </View>
+
+          <Ionicons
+            name={settingsOpen ? 'chevron-up' : 'chevron-down'}
+            size={18}
+            color={TEXT_TERTIARY}
+          />
+        </Pressable>
+
+        {settingsOpen
+          ? settings.map((setting) => {
+              const isSubSetting = setting.id !== 'general';
+              const isDisabled = updateSettings.isPending || (isSubSetting && !generalOn);
+
+              return (
+                <View key={setting.id}>
+                  <View style={s.divider} />
+                  <View style={[s.settingRow, isDisabled && s.settingRowDimmed]}>
+                    <View
+                      style={[
+                        s.settingIconWrap,
+                        {
+                          backgroundColor:
+                            setting.enabled && !isDisabled ? BRAND_LIGHT : '#F8FAFC',
+                        },
+                      ]}
+                    >
+                      <Ionicons
+                        name={setting.icon}
+                        size={16}
+                        color={
+                          setting.enabled && !isDisabled ? BRAND : TEXT_TERTIARY
+                        }
+                      />
+                    </View>
+
+                    <View style={s.settingTextWrap}>
+                      <Text style={s.settingLabel}>{setting.label}</Text>
+                      <Text style={s.settingDesc}>{setting.description}</Text>
+                    </View>
+
+                    <Switch
+                      value={setting.enabled}
+                      onValueChange={() =>
+                        updateSettings.mutate({ [setting.id]: !setting.enabled })
+                      }
+                      trackColor={{ false: '#E5E7EB', true: BRAND }}
+                      thumbColor="#fff"
+                      ios_backgroundColor="#E5E7EB"
+                      disabled={isDisabled}
+                    />
+                  </View>
+                </View>
+              );
+            })
+          : null}
+      </View>
     </View>
   );
 
   return (
-    <SafeAreaView style={s.screen} edges={["top"]}>
-      {/* Header */}
+    <SafeAreaView style={s.screen} edges={['top']}>
       <View style={s.header}>
         <Pressable style={s.backBtn} onPress={() => router.back()} hitSlop={10}>
           {({ pressed }) => (
@@ -335,10 +339,12 @@ export default function NotificationsScreen() {
             />
           )}
         </Pressable>
+
         <View style={s.headerTextWrap}>
           <Text style={s.headerTitle}>Notifications</Text>
-          <Text style={s.headerSubtitle}>Recent updates and activity</Text>
+          <Text style={s.headerSubtitle}>Orders, payments, and updates</Text>
         </View>
+
         <View style={{ width: 40 }} />
       </View>
 
@@ -350,14 +356,17 @@ export default function NotificationsScreen() {
         <FlatList
           data={notifications}
           keyExtractor={(item) => item.id}
-          renderItem={({
-            item,
-          }: ListRenderItemInfo<NotificationItem>) => (
+          renderItem={({ item }: ListRenderItemInfo<NotificationItem>) => (
             <NotifRow
               item={item}
               onPress={(id, route) => {
-                if (!item.read) markRead.mutate(id);
-                if (route) router.push(route as any);
+                if (!item.read) {
+                  markRead.mutate(id);
+                }
+
+                if (route) {
+                  router.push(route as any);
+                }
               }}
             />
           )}
@@ -366,15 +375,11 @@ export default function NotificationsScreen() {
           ListEmptyComponent={
             <View style={s.empty}>
               <View style={s.emptyIconWrap}>
-                <Ionicons
-                  name="notifications-outline"
-                  size={34}
-                  color={BRAND}
-                />
+                <Ionicons name="notifications-outline" size={34} color={BRAND} />
               </View>
               <Text style={s.emptyTitle}>No notifications yet</Text>
               <Text style={s.emptyBody}>
-                Order updates and account activity{"\n"}will appear here.
+                When orders move, payments complete, or new marketplace alerts arrive, they’ll show up here.
               </Text>
             </View>
           }
@@ -395,102 +400,129 @@ export default function NotificationsScreen() {
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: SCREEN_BG },
-
-  // ── Header (matches profile.tsx) ────────────────────────────────────────────
+  screen: {
+    flex: 1,
+    backgroundColor: SCREEN_BG,
+  },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 8,
-    paddingBottom: 12,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   backBtn: {
     width: 40,
     height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 12,
-    backgroundColor: "#fff",
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: DIVIDER,
   },
-  headerTextWrap: { alignItems: "center" },
-  headerTitle: { fontSize: 22, fontWeight: "800", color: TEXT_PRIMARY },
-  headerSubtitle: { fontSize: 12, color: TEXT_TERTIARY, marginTop: 2 },
-
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
-
-  listContent: { paddingHorizontal: 20, paddingBottom: 56, paddingTop: 8 },
-
-  // ── List sub-header ──────────────────────────────────────────────────────────
-  listHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 0,
+  headerTextWrap: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: TEXT_PRIMARY,
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: '#8C7482',
+    marginTop: 2,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  listContent: {
+    paddingHorizontal: 20,
     paddingTop: 8,
-    paddingBottom: 16,
+    paddingBottom: 56,
   },
-  statusPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 999,
-    backgroundColor: "#FFFFFF",
+  heroCard: {
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: "#E8ECF1",
+    borderColor: DIVIDER,
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    marginBottom: 20,
   },
-  statusDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 999,
-    backgroundColor: "#10B981",
-    marginRight: 7,
+  heroTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: TEXT_PRIMARY,
   },
-  statusDotUnread: { backgroundColor: BRAND },
-  listHeaderLabel: { fontSize: 12, fontWeight: "700", color: "#475467" },
+  heroBody: {
+    fontSize: 14,
+    lineHeight: 20,
+    color: TEXT_SECONDARY,
+    marginTop: 6,
+  },
   markAllBtn: {
-    backgroundColor: "#FFFFFF",
-    borderWidth: 1,
-    borderColor: "#E4E7EC",
+    marginTop: 14,
+    alignSelf: 'flex-start',
+    backgroundColor: BRAND_LIGHT,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 999,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
-  markAllBtnPressed: { opacity: 0.8 },
-  markAllText: { fontSize: 12, fontWeight: "700", color: "#344054" },
-
-  // ── Notification row ─────────────────────────────────────────────────────────
+  markAllBtnPressed: {
+    opacity: 0.8,
+  },
+  markAllText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: BRAND,
+  },
+  sectionHeader: {
+    marginBottom: 14,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: TEXT_PRIMARY,
+  },
+  sectionCaption: {
+    fontSize: 13,
+    color: '#866B79',
+    marginTop: 4,
+  },
   row: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     paddingHorizontal: 16,
     paddingVertical: 16,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: "#E8ECF1",
-    borderRadius: 18,
-    position: "relative",
-    shadowColor: "#101828",
-    shadowOpacity: 0.06,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 10,
+    borderColor: DIVIDER,
+    borderRadius: 22,
+    position: 'relative',
+    shadowColor: '#101828',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 6 },
+    shadowRadius: 14,
     elevation: 2,
   },
-  rowUnread: { backgroundColor: "#FFF9FB", borderColor: "#FBCFE8" },
-  rowPressed: { opacity: 0.88 },
-  rowSeparator: {
-    height: 12,
+  rowUnread: {
+    backgroundColor: '#FFF9FC',
+    borderColor: '#F8BDD5',
   },
-
-  // thin left accent bar for unread
+  rowPressed: {
+    opacity: 0.88,
+  },
+  rowSeparator: {
+    height: 14,
+  },
   unreadBar: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     top: 12,
     bottom: 12,
@@ -499,120 +531,160 @@ const s = StyleSheet.create({
     borderBottomRightRadius: 3,
     backgroundColor: BRAND,
   },
-
   iconBubble: {
     width: 46,
     height: 46,
-    borderRadius: 13,
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginRight: 16,
     flexShrink: 0,
   },
-
-  rowContent: { flex: 1 },
+  rowContent: {
+    flex: 1,
+  },
   rowTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 6,
   },
   rowTitle: {
     flex: 1,
     fontSize: 15,
-    fontWeight: "600",
-    color: TEXT_SECONDARY,
+    fontWeight: '600',
+    color: '#4B5563',
     marginRight: 8,
   },
-  rowTitleBold: { fontWeight: "700", color: "#101828" },
-  rowMessage: { fontSize: 13, color: "#667085", lineHeight: 20 },
-  rowTime: { fontSize: 11, color: TEXT_TERTIARY, flexShrink: 0 },
+  rowTitleBold: {
+    fontWeight: '700',
+    color: '#101828',
+  },
+  rowMessage: {
+    fontSize: 13,
+    color: '#667085',
+    lineHeight: 20,
+    paddingRight: 8,
+  },
   rowTimePill: {
-    backgroundColor: "#F3F4F6",
+    backgroundColor: '#F8F0F4',
     borderRadius: 999,
     paddingHorizontal: 8,
-    paddingVertical: 2,
+    paddingVertical: 4,
   },
-  chevron: { marginLeft: 8, flexShrink: 0 },
-
-  // ── Empty state ──────────────────────────────────────────────────────────────
+  rowTime: {
+    fontSize: 11,
+    color: '#8A8390',
+    flexShrink: 0,
+  },
+  chevron: {
+    marginLeft: 8,
+    flexShrink: 0,
+    marginTop: 12,
+  },
   empty: {
-    alignItems: "center",
-    marginTop: 16,
-    paddingVertical: 50,
+    alignItems: 'center',
+    paddingVertical: 56,
     paddingHorizontal: 26,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: "#E8ECF1",
+    borderColor: DIVIDER,
   },
   emptyIconWrap: {
     width: 76,
     height: 76,
     borderRadius: 38,
     backgroundColor: BRAND_LIGHT,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 20,
   },
   emptyTitle: {
     fontSize: 17,
-    fontWeight: "700",
+    fontWeight: '700',
     color: TEXT_PRIMARY,
     marginBottom: 8,
-    textAlign: "center",
+    textAlign: 'center',
   },
   emptyBody: {
     fontSize: 14,
     color: TEXT_SECONDARY,
-    textAlign: "center",
+    textAlign: 'center',
     lineHeight: 21,
   },
-
-  // ── Settings card ────────────────────────────────────────────────────────────
-  settingsCard: {
+  footerWrap: {
     marginTop: 22,
-    marginHorizontal: 0,
+    gap: 14,
     marginBottom: 26,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 18,
+  },
+  settingsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#E8ECF1",
-    overflow: "hidden",
-    shadowColor: "#101828",
+    borderColor: DIVIDER,
+    overflow: 'hidden',
+    shadowColor: '#101828',
     shadowOpacity: 0.04,
     shadowOffset: { width: 0, height: 3 },
     shadowRadius: 8,
     elevation: 2,
   },
   settingsCardHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingVertical: 18,
+    paddingVertical: 16,
   },
-  settingsLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
-  settingsTitle: { fontSize: 15, fontWeight: "600", color: TEXT_PRIMARY },
-
+  settingsLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  settingsTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: TEXT_PRIMARY,
+  },
+  settingsSubtitle: {
+    fontSize: 12,
+    color: '#8C7482',
+    marginTop: 2,
+  },
   settingRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 16,
     gap: 12,
   },
-  settingRowDimmed: { opacity: 0.4 },
+  settingRowDimmed: {
+    opacity: 0.4,
+  },
   settingIconWrap: {
     width: 36,
     height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
   },
-  settingTextWrap: { flex: 1 },
-  settingLabel: { fontSize: 14, fontWeight: "500", color: TEXT_PRIMARY },
-  settingDesc: { fontSize: 12, color: TEXT_TERTIARY, marginTop: 2 },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: DIVIDER },
+  settingTextWrap: {
+    flex: 1,
+  },
+  settingLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: TEXT_PRIMARY,
+  },
+  settingDesc: {
+    fontSize: 12,
+    color: TEXT_TERTIARY,
+    marginTop: 2,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#F2EDF0',
+  },
 });

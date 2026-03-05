@@ -7,6 +7,7 @@ import {
 import { ordersService } from '@/services';
 import { CreateOrderPayload, Order } from '@/types';
 import { config } from '@/constants/config';
+import { cartKeys } from './useCart';
 
 // Query keys
 export const orderKeys = {
@@ -52,6 +53,8 @@ export function useCreateOrder() {
     onSuccess: (newOrder) => {
       // Invalidate orders list
       queryClient.invalidateQueries({ queryKey: orderKeys.lists() });
+      // Ensure cart clears immediately in authenticated flows after order creation
+      queryClient.invalidateQueries({ queryKey: cartKeys.all });
       // Add the new order to cache
       queryClient.setQueryData(orderKeys.detail(newOrder.id), newOrder);
     },

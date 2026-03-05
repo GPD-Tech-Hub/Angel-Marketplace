@@ -220,16 +220,10 @@ export default function OrdersScreen() {
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function Header() {
-  const router = useRouter();
   return (
     <View style={s.header}>
-      <Pressable onPress={() => router.back()} style={s.backBtn} hitSlop={10}>
-        {({ pressed }) => (
-          <Ionicons name="chevron-back" size={24} color="#111827" style={{ opacity: pressed ? 0.6 : 1 }} />
-        )}
-      </Pressable>
-      <Text style={s.headerTitle}>My Orders</Text>
-      <View style={{ width: 40 }} />
+      <Text style={s.headerTitle}>Orders</Text>
+      <View style={s.headerSpacer} />
     </View>
   );
 }
@@ -278,15 +272,13 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    paddingHorizontal: 12,
-    paddingBottom: 12,
-    paddingTop: 4,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    paddingTop: 10,
   },
-  backBtn:     { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#111827' },
+  headerTitle: { fontSize: 30, lineHeight: 40, fontWeight: '600', color: '#000000' },
+  headerSpacer: { width: 40, height: 40 },
 
   // Tabs
   tabBar: {

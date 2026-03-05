@@ -81,7 +81,7 @@ export default function ResetPasswordScreen() {
                 Reset password
               </Text>
               <Text className="text-base text-gray-500 leading-6">
-                Set the new password for your account so you can login and access all the features.
+                Enter a new password.
               </Text>
             </View>
 
@@ -145,4 +145,3 @@ export default function ResetPasswordScreen() {
     </SafeAreaView>
   );
 }
-

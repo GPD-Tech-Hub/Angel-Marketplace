@@ -104,8 +104,7 @@ export default function LoginScreen() {
   return (
     <AuthScreenShell
       title="Welcome back"
-      subtitle="Pick up where you left off and continue shopping, tracking orders, and saving your favorites."
-      helper="Fast checkout, saved addresses, and KingsChat sign-in all live here."
+      subtitle="Sign in to continue."
       footer={(
         <>
           <FormButton
@@ -161,15 +160,6 @@ export default function LoginScreen() {
           <Text className="text-sm text-red-600">{error}</Text>
         </View>
       )}
-
-      <View className="mb-5 rounded-2xl bg-[#fff5f8] px-4 py-4">
-        <Text className="text-xs font-semibold uppercase tracking-[1.4px] text-[#be185d]">
-          Member access
-        </Text>
-        <Text className="mt-2 text-sm leading-5 text-[#6b4455]">
-          Use your email and password, or sign in with KingsChat for a quicker return.
-        </Text>
-      </View>
 
       {formFields.map((field) => (
         <FormField

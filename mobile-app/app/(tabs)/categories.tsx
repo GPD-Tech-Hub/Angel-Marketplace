@@ -69,9 +69,8 @@ export default function CategoriesScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { fontSize: Math.round(24 * scale) }]}>
-            Categories
-          </Text>
+          <Text style={styles.headerTitle}>Categories</Text>
+          <View style={styles.headerSpacer} />
         </View>
         <View style={styles.loadingWrap}>
           <ActivityIndicator size="large" color={colors.brand} />
@@ -84,9 +83,8 @@ export default function CategoriesScreen() {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
         <View style={styles.header}>
-          <Text style={[styles.headerTitle, { fontSize: Math.round(24 * scale) }]}>
-            Categories
-          </Text>
+          <Text style={styles.headerTitle}>Categories</Text>
+          <View style={styles.headerSpacer} />
         </View>
         <View style={styles.errorWrap}>
           <Ionicons name="alert-circle-outline" size={48} color={colors.brand} style={styles.errorIcon} />
@@ -111,9 +109,8 @@ export default function CategoriesScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { fontSize: Math.round(24 * scale) }]}>
-          Categories
-        </Text>
+        <Text style={styles.headerTitle}>Categories</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
       <FlatList

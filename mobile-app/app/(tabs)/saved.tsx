@@ -3,13 +3,11 @@ import { View, Text, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
 import { useFavorites } from '@/hooks';
 import { useResponsive } from '@/hooks';
 import { DiscoverSearchBar } from '@/components/layout/DiscoverSearchBar';
 import { SavedItemsGrid } from '@/components/saved';
 import { savedScreenStyles as styles } from '@/styles/savedScreen';
-import { colors } from '@/constants/colors';
 
 export default function SavedScreen() {
   const router = useRouter();
@@ -41,13 +39,7 @@ export default function SavedScreen() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()} hitSlop={10}>
-          {({ pressed }) => (
-            <Ionicons name="chevron-back" size={22} color={colors.gray[900]} style={{ opacity: pressed ? 0.6 : 1 }} />
-          )}
-        </Pressable>
-
-        <Text style={styles.headerTitle}>Saved Items</Text>
+        <Text style={styles.headerTitle}>Saved</Text>
 
         {favorites.length > 0 ? (
           <View style={styles.headerBadge}>

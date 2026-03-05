@@ -62,6 +62,10 @@ export default function OrderDetailScreen() {
     try { await refetch(); } finally { setRefreshing(false); }
   }, [refetch]);
 
+  const handleBackToOrders = useCallback(() => {
+    router.replace('/(tabs)/orders' as any);
+  }, [router]);
+
   const handleReviewSubmit = async (rating: number, comment: string) => {
     if (!id) return;
     try {
@@ -79,7 +83,7 @@ export default function OrderDetailScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[s.loadingScreen, { paddingTop: insets.top }]}>
           <View style={[s.header, { paddingTop: insets.top }]}>
-            <Pressable onPress={() => router.back()} style={s.backBtn} hitSlop={10}>
+            <Pressable onPress={handleBackToOrders} style={s.backBtn} hitSlop={10}>
               <Ionicons name="chevron-back" size={24} color="#111827" />
             </Pressable>
             <Text style={s.headerTitle}>Order Details</Text>
@@ -100,7 +104,7 @@ export default function OrderDetailScreen() {
         <Stack.Screen options={{ headerShown: false }} />
         <View style={[s.loadingScreen, { paddingTop: insets.top }]}>
           <View style={[s.header, { paddingTop: insets.top }]}>
-            <Pressable onPress={() => router.back()} style={s.backBtn} hitSlop={10}>
+            <Pressable onPress={handleBackToOrders} style={s.backBtn} hitSlop={10}>
               <Ionicons name="chevron-back" size={24} color="#111827" />
             </Pressable>
             <Text style={s.headerTitle}>Order Details</Text>
@@ -132,7 +136,7 @@ export default function OrderDetailScreen() {
 
       {/* ── Custom header ─────────────────────────────────────────────── */}
       <View style={[s.header, { paddingTop: insets.top }]}>
-        <Pressable onPress={() => router.back()} style={s.backBtn} hitSlop={10}>
+        <Pressable onPress={handleBackToOrders} style={s.backBtn} hitSlop={10}>
           {({ pressed }) => (
             <Ionicons name="chevron-back" size={24} color="#111827" style={{ opacity: pressed ? 0.5 : 1 }} />
           )}
