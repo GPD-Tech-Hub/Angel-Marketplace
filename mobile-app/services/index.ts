@@ -6,3 +6,5 @@ export { default as cartService } from './cart.service';
 export { default as ordersService } from './orders.service';
 export { default as paymentService } from './payment.service';
 export { default as notificationsService } from './notifications.service';
+export { default as kingsChatService } from './kingschat.service';
+export { KingsChatAuthError } from './kingschat.service';

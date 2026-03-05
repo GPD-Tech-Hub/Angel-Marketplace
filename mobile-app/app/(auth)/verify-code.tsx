@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
+import { View, Text, Pressable, Alert } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { useResponsive } from '@/hooks';
 import { FormButton, OTPInput } from '@/components/ui';
+import AuthScreenShell from '@/components/auth/AuthScreenShell';
 import { authService } from '@/services';
 import { colors } from '@/constants/colors';
 
@@ -15,8 +13,6 @@ export default function VerifyCodeScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { horizontalPadding } = useResponsive();
-  const insets = useSafeAreaInsets();
 
   const email = params.email ?? '';
 
@@ -62,100 +58,81 @@ export default function VerifyCodeScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
-        <View className="flex-1">
-          <ScrollView
-            className="flex-1"
-            contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 16 }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
-            {/* Back */}
-            <Pressable
-              className="w-10 h-10 items-center justify-center mt-4 mb-2"
-              onPress={() => router.back()}
-            >
+    <AuthScreenShell
+      title="Enter 6-digit code"
+      subtitle={email ? `We sent a reset code to ${email}.` : 'Enter the code from your email to continue.'}
+      helper="This code unlocks the final password reset step."
+      showBack
+      footer={(
+        <>
+          <FormButton
+            title={isLoading ? 'Verifying…' : 'Verify Code'}
+            onPress={handleVerify}
+            loading={isLoading}
+            disabled={code.length !== 6 || isLoading}
+            variant="primary"
+            backgroundColor={code.length === 6 ? colors.brand : '#FCE7F3'}
+            textColor={code.length === 6 ? '#FFFFFF' : '#9F1239'}
+          />
+
+          <View className="mt-4 flex-row justify-center items-center">
+            <Text className="text-base text-[#7a6673]">Didn&apos;t get it? </Text>
+            <Pressable onPress={handleResend} disabled={isResending} hitSlop={8}>
               {({ pressed }) => (
-                <Ionicons
-                  name="arrow-back"
-                  size={24}
-                  color={colors.gray[700]}
-                  style={{ opacity: pressed ? 0.7 : 1 }}
-                />
+                <Text
+                  style={{ opacity: pressed || isResending ? 0.6 : 1 }}
+                  className="text-base font-semibold text-[#F43F5E]"
+                >
+                  {isResending ? 'Sending…' : 'Resend code'}
+                </Text>
               )}
             </Pressable>
-
-            {/* Header */}
-            <View className="mb-8 items-center">
-              <Text className="text-3xl font-bold text-black mb-3 text-center">
-                Enter 6-digit code
-              </Text>
-              <Text className="text-base text-gray-500 text-center leading-6 px-4">
-                {email
-                  ? `We sent a reset code to ${email}.`
-                  : 'Enter the code from your email.'}
-              </Text>
-            </View>
-
-            {/* Error */}
-            {error ? (
-              <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-6">
-                <Text className="text-red-600 text-sm text-center">{error}</Text>
-              </View>
-            ) : null}
-
-            {/* OTP input — 6 digits */}
-            <View className="mb-6">
-              <OTPInput
-                length={6}
-                value={code}
-                onChange={setCode}
-                onComplete={handleVerify}
-                error={!!error}
-              />
-            </View>
-
-            {/* Resend */}
-            <View className="flex-row justify-center items-center mb-4">
-              <Text className="text-gray-500 text-base">Code not received? </Text>
-              <Pressable onPress={handleResend} disabled={isResending} hitSlop={8}>
-                {({ pressed }) => (
-                  <Text
-                    style={{ color: colors.brand, opacity: pressed || isResending ? 0.6 : 1 }}
-                    className="text-base font-medium"
-                  >
-                    {isResending ? 'Sending…' : 'Resend code'}
-                  </Text>
-                )}
-              </Pressable>
-            </View>
-          </ScrollView>
-
-          {/* Sticky button */}
-          <View
-            className="bg-white"
-            style={{
-              paddingHorizontal: horizontalPadding,
-              paddingTop: 12,
-              paddingBottom: insets.bottom + 28,
-            }}
-          >
-            <FormButton
-              title={isLoading ? 'Verifying…' : 'Verify Code'}
-              onPress={handleVerify}
-              loading={isLoading}
-              disabled={code.length !== 6 || isLoading}
-              variant="primary"
-              backgroundColor={code.length === 6 ? colors.brand : colors.gray[100]}
-              textColor={code.length === 6 ? '#FFFFFF' : colors.gray[500]}
-            />
           </View>
+        </>
+      )}
+    >
+      <View className="mb-6 items-center rounded-[26px] border border-[#f7d7e6] bg-[#fff9fc] px-5 py-6">
+        <View className="mb-4 rounded-full bg-[#ffe4ef] px-4 py-2">
+          <Text className="text-xs font-semibold uppercase tracking-[1.5px] text-[#be185d]">
+            Security check
+          </Text>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+
+        <Text className="text-center text-sm leading-6 text-[#6b4455]">
+          Enter the code exactly as it appears in your inbox. It&apos;s valid for a limited time.
+        </Text>
+
+        {email ? (
+          <View className="mt-4 rounded-full border border-[#f3c4d9] bg-white px-4 py-2">
+            <Text className="text-sm font-medium text-[#7c2d56]">{email}</Text>
+          </View>
+        ) : null}
+      </View>
+
+      {error ? (
+        <View className="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+          <Text className="text-center text-sm text-red-600">{error}</Text>
+        </View>
+      ) : null}
+
+      <View className="mb-6 items-center">
+        <OTPInput
+          length={6}
+          value={code}
+          onChange={setCode}
+          onComplete={handleVerify}
+          error={!!error}
+        />
+      </View>
+
+      <View className="rounded-2xl bg-[#fff5f8] px-4 py-4">
+        <Text className="text-xs font-semibold uppercase tracking-[1.4px] text-[#be185d]">
+          Quick tip
+        </Text>
+        <Text className="mt-2 text-sm leading-5 text-[#6b4455]">
+          If the code does not arrive, wait a few seconds before resending so the newest message is the one you use.
+        </Text>
+      </View>
+    </AuthScreenShell>
   );
 }

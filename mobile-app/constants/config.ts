@@ -5,12 +5,15 @@ const DEFAULT_API_URL = 'http://ygkgc0o00cg4w4408k840og0.102.219.189.97.sslip.io
 const ENV = {
   development: {
     API_URL: (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) || DEFAULT_API_URL,
+    NEWSLETTER_URL: (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NEWSLETTER_URL) || 'https://angelmarketplace.org/api/newsletter.php',
   },
   staging: {
     API_URL: (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) || 'https://staging-api.angelmarketplace.com/api',
+    NEWSLETTER_URL: (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NEWSLETTER_URL) || 'https://angelmarketplace.org/api/newsletter.php',
   },
   production: {
     API_URL: (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) || DEFAULT_API_URL,
+    NEWSLETTER_URL: (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_NEWSLETTER_URL) || 'https://angelmarketplace.org/api/newsletter.php',
   },
 };
 

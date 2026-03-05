@@ -71,6 +71,7 @@ export const STORAGE_KEYS = {
   ACCESS_TOKEN: 'access_token',
   REFRESH_TOKEN: 'refresh_token',
   USER: 'user',
+  NEWSLETTER_SUBSCRIBED: 'newsletter_subscribed',
   CART: 'cart',
   FAVORITES: 'favorites',
   RECENT_SEARCHES: 'recent_searches',

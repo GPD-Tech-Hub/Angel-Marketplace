@@ -17,6 +17,14 @@ export const authService = {
     return response.data.data;
   },
 
+  async loginWithKingsChat(accessToken: string): Promise<AuthResponse> {
+    const response = await api.post<ApiResponse<AuthResponse>>(
+      ENDPOINTS.AUTH.KINGSCHAT,
+      { accessToken }
+    );
+    return response.data.data;
+  },
+
   async register(data: RegisterData): Promise<AuthResponse> {
     const response = await api.post<ApiResponse<AuthResponse>>(
       ENDPOINTS.AUTH.REGISTER,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -10,39 +10,75 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
-import api from '@/services/api';
-import { ENDPOINTS } from '@/constants/endpoints';
+import axios from 'axios';
+import { config } from '@/constants/config';
 import { colors } from '@/constants/colors';
+import { useAuthStore } from '@/store';
+import { storage, STORAGE_KEYS } from '@/utils';
 
 async function subscribe(email: string) {
-  await api.post(ENDPOINTS.NEWSLETTER.SUBSCRIBE, { email });
+  const response = await axios.post(
+    config.NEWSLETTER_URL,
+    { action: 'subscribe', email },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (response.data?.success === false) {
+    throw new Error(response.data?.message || 'Could not subscribe. Please try again.');
+  }
+
+  return response.data;
 }
 
 export function NewsletterCard() {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadSubscriptionState() {
+      try {
+        const saved = await storage.getItem<boolean>(STORAGE_KEYS.NEWSLETTER_SUBSCRIBED);
+        if (mounted) {
+          setSubscribed(Boolean(saved));
+        }
+      } finally {
+        if (mounted) {
+          setIsReady(true);
+        }
+      }
+    }
+
+    loadSubscriptionState();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const mutation = useMutation({
     mutationFn: () => subscribe(email.trim()),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await storage.setItem(STORAGE_KEYS.NEWSLETTER_SUBSCRIBED, true);
       setSubscribed(true);
       setEmail('');
     },
     onError: (err: any) => {
-      Alert.alert('Error', err?.response?.data?.message || 'Could not subscribe. Please try again.');
+      Alert.alert('Error', err?.response?.data?.message || err?.message || 'Could not subscribe. Please try again.');
     },
   });
 
   const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
 
-  if (subscribed) {
-    return (
-      <View style={s.card}>
-        <Ionicons name="checkmark-circle" size={28} color={colors.brand} />
-        <Text style={s.successTitle}>You're subscribed!</Text>
-        <Text style={s.successBody}>Thanks for signing up. Watch your inbox for exclusive deals.</Text>
-      </View>
-    );
+  if (!isReady || isAuthenticated || subscribed) {
+    return null;
   }
 
   return (
@@ -88,6 +124,4 @@ const s = StyleSheet.create({
   input:        { flex: 1, borderWidth: 1.5, borderColor: '#FECDD3', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: '#fff', fontSize: 14, color: '#111827' },
   btn:          { width: 44, height: 44, borderRadius: 10, backgroundColor: colors.brand, alignItems: 'center', justifyContent: 'center' },
   btnDisabled:  { backgroundColor: '#E5E7EB' },
-  successTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginTop: 10 },
-  successBody:  { fontSize: 13, color: '#6B7280', textAlign: 'center', marginTop: 4 },
 });

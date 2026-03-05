@@ -2,6 +2,7 @@ export const ENDPOINTS = {
   // Auth
   AUTH: {
     LOGIN: '/auth/login',
+    KINGSCHAT: '/auth/kingschat',
     REGISTER: '/auth/register',
     LOGOUT: '/auth/logout',
     REFRESH: '/auth/refresh',

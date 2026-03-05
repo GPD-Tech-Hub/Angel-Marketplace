@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { View, Text, Pressable, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useResponsive } from '@/hooks';
 import { FormButton, FormField, type FormFieldConfig } from '@/components/ui';
+import AuthScreenShell from '@/components/auth/AuthScreenShell';
 import { registerSchema, RegisterInput } from '@/utils/validation';
+import { completeKingsChatAuth, getKingsChatErrorMessage } from '@/utils/kingschatAuth';
 import { Image } from 'expo-image';
 import { authService } from '@/services';
 import { useAuthStore } from '@/store';
@@ -15,9 +15,8 @@ import { AxiosError } from 'axios';
 export default function RegisterScreen() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isKingsChatLoading, setIsKingsChatLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { horizontalPadding } = useResponsive();
-  const insets = useSafeAreaInsets();
   const loginStore = useAuthStore((state) => state.login);
 
   const {
@@ -49,6 +48,24 @@ export default function RegisterScreen() {
       setError(message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const onKingsChatSignup = async () => {
+    setError(null);
+    setIsKingsChatLoading(true);
+
+    try {
+      await completeKingsChatAuth();
+      router.replace('/(tabs)');
+    } catch (err) {
+      const message = getKingsChatErrorMessage(err, 'KingsChat sign up failed');
+      if (!message) {
+        return;
+      }
+      setError(message);
+    } finally {
+      setIsKingsChatLoading(false);
     }
   };
 
@@ -99,108 +116,93 @@ export default function RegisterScreen() {
   );
 
   return (
-    <SafeAreaView className="flex-1 bg-white" edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        className="flex-1"
-      >
-        <View className="flex-1">
-          <ScrollView
-            className="flex-1"
-            contentContainerStyle={{ paddingHorizontal: horizontalPadding, paddingBottom: 16 }}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={true}
-          >
-            {/* Header */}
-            <View className="mb-10 mt-4">
-              <Text className="text-3xl font-bold text-black mb-2">
-                Create an account
-              </Text>
-              <Text className="text-base text-gray-500">
-                Let's create your account.
-              </Text>
-            </View>
+    <AuthScreenShell
+      title="Create your shopper account"
+      subtitle="Join Angel Marketplace to save products, place orders faster, and keep everything synced across devices."
+      helper="Set up with email or step in quickly with KingsChat."
+      footer={(
+        <>
+          <FormButton
+            title={isLoading ? 'Creating account...' : 'Create account'}
+            onPress={handleSubmit(onSubmit)}
+            loading={isLoading}
+            disabled={!isValid || isLoading || isKingsChatLoading}
+            variant="primary"
+            backgroundColor={isValid ? '#F43F5E' : '#FCE7F3'}
+            textColor={isValid ? '#FFFFFF' : '#9F1239'}
+          />
 
-            {/* Error Message */}
-            {error && (
-              <View className="bg-red-50 border border-red-200 rounded-xl p-3 mb-4">
-                <Text className="text-red-600 text-sm">{error}</Text>
-              </View>
-            )}
-
-            {/* Fields */}
-            {formFields.map((field) => (
-              <FormField
-                key={field.name}
-                control={control}
-                name={field.name}
-                label={field.label}
-                placeholder={field.placeholder}
-                type={field.type}
-                autoCapitalize={field.autoCapitalize}
-                autoComplete={field.autoComplete}
-                required={field.required}
-                error={(errors as any)[field.name]}
-              />
-            ))}
-
-            {/* Terms (above bottom area, scrolls with fields) */}
-            <View className="mt-1">
-              {footerText}
-            </View>
-          </ScrollView>
-
-          {/* Bottom sticky actions */}
-          <View
-            className="bg-white"
-            style={{
-              paddingHorizontal: horizontalPadding,
-              paddingTop: 12,
-              paddingBottom: insets.bottom + 28,
-            }}
-          >
-            <FormButton
-              title={isLoading ? 'Creating account...' : 'Create account'}
-              onPress={handleSubmit(onSubmit)}
-              loading={isLoading}
-              disabled={!isValid || isLoading}
-              variant="primary"
-              backgroundColor={isValid ? '#F43F5E' : '#F3F4F6'}
-              textColor={isValid ? '#FFFFFF' : '#000000'}
-            />
-
-            <View className="items-center my-3">
-              <Text className="text-gray-500 font-medium text-sm">OR</Text>
-            </View>
-
-            <FormButton
-              title="Sign Up with KingsChat"
-              onPress={() => {
-                // Handle KingsChat signup
-              }}
-              variant="secondary"
-              rightElement={(
-                <Image
-                  source={require('../../assets/icons/KC.png')}
-                  style={{ width: 22, height: 22, marginLeft: 8 }}
-                  contentFit="contain"
-                />
-              )}
-            />
-
-            <View className="flex-row justify-center items-center mt-3">
-              <Text className="text-[#737373] text-base">Already have an account? </Text>
-              <Pressable onPress={() => router.push('/(auth)/login')}>
-                {({ pressed }) => (
-                  <Text className={`text-[#F43F5E] font-medium text-base ${pressed ? 'opacity-70' : ''}`}>
-                    Log In
-                  </Text>
-                )}
-              </Pressable>
-            </View>
+          <View className="my-4 flex-row items-center">
+            <View className="h-px flex-1 bg-[#f1d6e2]" />
+            <Text className="mx-3 text-xs font-semibold uppercase tracking-[1.6px] text-[#9f718a]">
+              Or sign up with
+            </Text>
+            <View className="h-px flex-1 bg-[#f1d6e2]" />
           </View>
+
+          <FormButton
+            title={isKingsChatLoading ? 'Connecting KingsChat...' : 'Sign Up with KingsChat'}
+            onPress={onKingsChatSignup}
+            loading={isKingsChatLoading}
+            disabled={isLoading || isKingsChatLoading}
+            variant="secondary"
+            backgroundColor="#1D4ED8"
+            textColor="#FFFFFF"
+            rightElement={(
+              <Image
+                source={require('../../assets/icons/KC.png')}
+                style={{ width: 22, height: 22, marginLeft: 8 }}
+                contentFit="contain"
+              />
+            )}
+          />
+
+          <View className="mt-4 flex-row justify-center items-center">
+            <Text className="text-base text-[#7a6673]">Already have an account? </Text>
+            <Pressable onPress={() => router.push('/(auth)/login')}>
+              {({ pressed }) => (
+                <Text className={`text-base font-semibold text-[#F43F5E] ${pressed ? 'opacity-70' : ''}`}>
+                  Log In
+                </Text>
+              )}
+            </Pressable>
+          </View>
+        </>
+      )}
+    >
+      {error && (
+        <View className="mb-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+          <Text className="text-sm text-red-600">{error}</Text>
         </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+      )}
+
+      <View className="mb-5 rounded-2xl bg-[#fff5f8] px-4 py-4">
+        <Text className="text-xs font-semibold uppercase tracking-[1.4px] text-[#be185d]">
+          New here
+        </Text>
+        <Text className="mt-2 text-sm leading-5 text-[#6b4455]">
+          Create a clean profile now and your wishlist, cart, and checkout details will follow you everywhere.
+        </Text>
+      </View>
+
+      {formFields.map((field) => (
+        <FormField
+          key={field.name}
+          control={control}
+          name={field.name}
+          label={field.label}
+          placeholder={field.placeholder}
+          type={field.type}
+          autoCapitalize={field.autoCapitalize}
+          autoComplete={field.autoComplete}
+          required={field.required}
+          error={(errors as any)[field.name]}
+        />
+      ))}
+
+      <View className="mt-2">
+        {footerText}
+      </View>
+    </AuthScreenShell>
   );
 }
